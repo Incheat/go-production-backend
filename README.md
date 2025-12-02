@@ -9,6 +9,9 @@ This project is a Go-based backend service designed with clean architecture prin
 
 ## 🚀 Tech Stack
 
+### **Develop**
+* **Oapi-codegen** — use strict server to achieve API-First development
+
 ### **Languages & Frameworks**
 
 * **Go** — primary backend language
