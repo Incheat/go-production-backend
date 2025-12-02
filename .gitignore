@@ -30,3 +30,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# oapi-codegen generated code
+services/*/internal/api/gen/
+*_gen.go
+*generated.go
