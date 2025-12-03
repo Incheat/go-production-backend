@@ -3,10 +3,10 @@ server:
 
 cors:
   rules:
-    - path: "/health"
+    - path: "/v1/*"
       allowed_origins:
         - "*"
-    - path: "/api/v1/public/*"
+    - path: "/v2/*"
       allowed_origins:
         - "https://app.example.com"
         - "https://cdn.example.com"
