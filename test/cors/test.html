@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+    <script>
+        fetch("http://localhost:8080/v1/ping", {
+                method: "GET",
+                credentials: "include"
+            })
+            .then(res => console.log("OK", res))
+            .catch(err => console.error("CORS BLOCKED", err));
+    </script>
+</body>
+
+</html>
