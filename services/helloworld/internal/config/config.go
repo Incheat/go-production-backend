@@ -1,5 +1,6 @@
 package config
 
+// Config is the configuration for the application.
 type Config struct {
 	Server struct {
 		Port int `koanf:"port"`
@@ -29,6 +30,7 @@ type Config struct {
 	} `koanf:"jwt"`
 }
 
+// CORSRule is a rule that defines the CORS configuration for a specific path.
 type CORSRule struct {
 	Path           string   `koanf:"path"`
 	AllowedOrigins []string `koanf:"allowed_origins"`
