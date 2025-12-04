@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/incheat/go-playground/internal/middleware"
 	globalmiddleware "github.com/incheat/go-playground/internal/middleware"
 	"github.com/incheat/go-playground/internal/oapi"
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/server"
@@ -63,10 +62,10 @@ func main() {
 	
 }
 
-func convertCORSRules(cfg *config.Config) []middleware.CORSRule {
-	corsRules := make([]middleware.CORSRule, len(cfg.CORS.Rules))
+func convertCORSRules(cfg *config.Config) []globalmiddleware.CORSRule {
+	corsRules := make([]globalmiddleware.CORSRule, len(cfg.CORS.Rules))
 	for i, rule := range cfg.CORS.Rules {
-		corsRules[i] = middleware.CORSRule{
+		corsRules[i] = globalmiddleware.CORSRule{
 			Path:           rule.Path,
 			AllowedOrigins: rule.AllowedOrigins,
 		}
