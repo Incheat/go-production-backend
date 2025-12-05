@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 	globalmiddleware "github.com/incheat/go-playground/internal/middleware"
@@ -20,9 +19,8 @@ import (
 
 func main() {
 	cfg := config.MustLoad()
-	env := os.Getenv("APP_ENV")
 
-	fmt.Printf("ENV: %s\n", env)
+	fmt.Printf("ENV: %s\n", cfg.Env)
 	fmt.Printf("Server port: %d\n", cfg.Server.Port)
 
 	logger, _ := zap.NewDevelopment()
@@ -33,7 +31,15 @@ func main() {
 		log.Fatalf("Error loading swagger spec: %v", err)
 	}
 
-	r := gin.Default()
+	switch cfg.Env {
+	case config.EnvDev, config.EnvStaging:
+		gin.SetMode(gin.ReleaseMode)
+	default:
+		gin.SetMode(gin.DebugMode)
+	}
+
+	r := gin.New()
+
 	// Apply CORS rules based on the request path.
 	r.Use(
 		globalmiddleware.PathBasedCORS(convertCORSRules(cfg)),
@@ -45,7 +51,7 @@ func main() {
 	r.Use(ginmiddleware.OapiRequestValidatorWithOptions(
 		swagger,
 		oapi.NewValidatorOptions(oapi.ValidatorConfig{
-			ProdMode: env == "prod",
+			ProdMode: cfg.Env == config.EnvProd,
 		}),
 	))
 
