@@ -22,8 +22,13 @@ redis:
   password: ""
   db: 0
 
+# generate a random secret key for JWT
+# 32 bytes base64
+#openssl rand -base64 32
+# or hex:
+#openssl rand -hex 32
 jwt:
-  secret: "super-secret-key-change-me"
+  secret: "L8hCW84Q5XiY2Z3aDT28UN1f3uUSgfcQdWlxy3GsB8Q="
   expire: 60
 
 app:
