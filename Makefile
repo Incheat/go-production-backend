@@ -42,3 +42,15 @@ generate-all:
 		$(MAKE) generate SERVICE=$$svc; \
 	done
 	@echo "All services updated."
+
+# ----------------------------------------
+# Run the auth service with different environments
+# ----------------------------------------
+auth-dev:
+	cd services/auth && APP_ENV=dev go run ./cmd/main.go
+
+auth-stage:
+	cd services/auth && APP_ENV=stage go run ./cmd/main.go
+
+auth-prod:
+	cd services/auth && APP_ENV=prod go run ./cmd/main.go
