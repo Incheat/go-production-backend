@@ -46,11 +46,15 @@ generate-all:
 # ----------------------------------------
 # Run the auth service with different environments
 # ----------------------------------------
-auth-dev:
-	cd services/auth && APP_ENV=dev go run ./cmd/main.go
+# make run-dev SERVICE=auth
+run-dev:
+	@echo "$(SERVICE) service running in dev mode"
+	cd services/${SERVICE} && APP_ENV=dev go run ./cmd/main.go
 
-auth-stage:
-	cd services/auth && APP_ENV=stage go run ./cmd/main.go
+run-stage:
+	@echo "$(SERVICE) service running in stage mode"
+	cd services/${SERVICE} && APP_ENV=stage go run ./cmd/main.go
 
-auth-prod:
-	cd services/auth && APP_ENV=prod go run ./cmd/main.go
+run-prod:
+	@echo "$(SERVICE) service running in prod mode"
+	cd services/${SERVICE} && APP_ENV=prod go run ./cmd/main.go
