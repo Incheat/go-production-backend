@@ -2,19 +2,21 @@ package auth
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
-	db "github.com/incheat/go-playground/services/auth/internal/db/gen"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/incheat/go-playground/services/auth/pkg/model"
 )
+
+// ErrNotFound is returned when a requested record is not found.
+var ErrMemberNotFound = errors.New("member not found")
+
+// ErrMemberAlreadyExists is returned when a member already exists.
+var ErrMemberAlreadyExists = errors.New("member already exists")
 
 // Controller is the controller for the auth API.
 type Controller struct {
-	// q     *db.Queries
-	repo AuthRepository
+	refreshTokenRepo RefreshTokenRepository
 	jwt JWTMaker
 	redis RedisClient
 }
@@ -31,54 +33,13 @@ type JWTMaker interface {
 	ParseUserID(tokenStr string) (string, error)
 }
 
-// AuthRepository is the interface for the auth repository.
-type AuthRepository interface {
-	GetUserByEmail(ctx context.Context, email string) (db.User, error)
-	CreateUser(ctx context.Context, user db.CreateUserParams) error
+// RefreshTokenRepository is the interface for the refresh token repository.
+type RefreshTokenRepository interface {
+	GetRefreshTokenByID(ctx context.Context, id string) (*model.RefreshToken, error)
+	CreateRefreshToken(ctx context.Context, id string, refreshToken *model.RefreshToken) error
 }
 
 // NewController creates a new Controller.
-func NewController(repo AuthRepository, jwt JWTMaker, redis RedisClient) *Controller {
-	return &Controller{repo: repo, jwt: jwt, redis: redis}
-}
-
-// Register registers a new user.
-func (s *Controller) Register(ctx context.Context, email, password, name string) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	id := uuid.NewString()
-	return s.repo.CreateUser(ctx, db.CreateUserParams{
-		ID:           id,
-		Email:        email,
-		PasswordHash: string(hash),
-		Name:         name,
-	})
-}
-
-// Login logs in a user.
-func (s *Controller) Login(ctx context.Context, email, password string) (userID, accessToken, refreshToken string, err error) {
-	u, err := s.repo.GetUserByEmail(ctx, email)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", "", "", errors.New("invalid credentials")
-		}
-		return "", "", "", err
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
-		return "", "", "", errors.New("invalid credentials")
-	}
-
-	access, err := s.jwt.CreateToken(u.ID)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	refresh := uuid.NewString()
-	// e.g. store refresh -> userID in Redis with longer TTL
-	_ = s.redis.Set(ctx, "auth:refresh:"+refresh, u.ID, 7*24*time.Hour)
-
-	return u.ID, access, refresh, nil
+func NewController(refreshTokenRepo RefreshTokenRepository, jwt JWTMaker, redis RedisClient) *Controller {
+	return &Controller{refreshTokenRepo: refreshTokenRepo, jwt: jwt, redis: redis}
 }

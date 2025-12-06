@@ -23,6 +23,22 @@ func NewHandler(ctrl *auth.Controller) *Handler {
 	return &Handler{ctrl: ctrl}
 }
 
+// Register is the handler for the Register endpoint.
+func (h *Handler) Register(ctx context.Context, request gen.RegisterRequestObject) (gen.RegisterResponseObject, error) {
+
+	accessToken := "test-access-token"
+	refreshToken := "test-refresh-token"
+	return gen.Register201JSONResponse{
+		Body: gen.AuthResponse{
+			AccessToken:  &accessToken,
+			RefreshToken: &refreshToken,
+		},
+		Headers: gen.Register201ResponseHeaders{
+			VersionId: "v1",
+		},
+	}, nil
+}
+
 // GetMe is the handler for the GetMe endpoint.
 func (h *Handler) GetMe(ctx context.Context, request gen.GetMeRequestObject) (gen.GetMeResponseObject, error) {
 
@@ -65,21 +81,6 @@ func (h *Handler) Login(ctx context.Context, request gen.LoginRequestObject) (ge
 func (h *Handler) Logout(ctx context.Context, request gen.LogoutRequestObject) (gen.LogoutResponseObject, error) {
 	return gen.Logout204Response{
 		Headers: gen.Logout204ResponseHeaders{
-			VersionId: "v1",
-		},
-	}, nil
-}
-
-// Register is the handler for the Register endpoint.
-func (h *Handler) Register(ctx context.Context, request gen.RegisterRequestObject) (gen.RegisterResponseObject, error) {
-	accessToken := "test-access-token"
-	refreshToken := "test-refresh-token"
-	return gen.Register201JSONResponse{
-		Body: gen.AuthResponse{
-			AccessToken:  &accessToken,
-			RefreshToken: &refreshToken,
-		},
-		Headers: gen.Register201ResponseHeaders{
 			VersionId: "v1",
 		},
 	}, nil
