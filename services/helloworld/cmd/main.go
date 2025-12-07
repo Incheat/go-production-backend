@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/incheat/go-playground/internal/middleware"
 	"github.com/incheat/go-playground/internal/oapi"
-	servergen "github.com/incheat/go-playground/services/helloworld/internal/api/gen/server"
+	servergen "github.com/incheat/go-playground/services/helloworld/internal/api/gen/oapi/public/server"
 	"github.com/incheat/go-playground/services/helloworld/internal/config"
 	"github.com/incheat/go-playground/services/helloworld/internal/handler"
 	ginmiddleware "github.com/oapi-codegen/gin-middleware"

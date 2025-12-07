@@ -4,7 +4,7 @@ package handler
 import (
 	"context"
 
-	gen "github.com/incheat/go-playground/services/helloworld/internal/api/gen/server"
+	gen "github.com/incheat/go-playground/services/helloworld/internal/api/gen/oapi/public/server"
 )
 
 // _ is a placeholder to ensure that Server implements the StrictServerInterface interface.
