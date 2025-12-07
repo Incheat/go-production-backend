@@ -33,6 +33,10 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Generate oapi code
+        run: |
+          go generate ./...
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
