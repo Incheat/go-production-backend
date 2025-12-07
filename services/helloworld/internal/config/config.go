@@ -1,3 +1,4 @@
+// Package config defines the configuration for the helloworld service.
 package config
 
 // Config is the configuration for the application.

@@ -1,3 +1,4 @@
+// Package memory defines the memory repository for the refresh token service.
 package memory
 
 import (
@@ -8,20 +9,20 @@ import (
 	"github.com/incheat/go-playground/services/auth/pkg/model"
 )
 
-// Repository defines a memory movie metadata repository.
+// RefreshTokenRepository defines a memory refresh token repository.
 type RefreshTokenRepository struct {
 	sync.RWMutex
 	data map[string]*model.RefreshToken
 }
 
-// NewRepository creates a new memory movie metadata repository.
+// NewRefreshTokenRepository creates a new memory refresh token repository.
 func NewRefreshTokenRepository() *RefreshTokenRepository {
 	return &RefreshTokenRepository{
 		data: make(map[string]*model.RefreshToken),
 	}
 }
 
-// GetRefreshTokenByID retrieves a refresh token by ID.
+// GetRefreshTokenByID gets a refresh token by ID.
 func (r *RefreshTokenRepository) GetRefreshTokenByID(_ context.Context, id string) (*model.RefreshToken, error) {
 	r.RLock()
 	defer r.RUnlock()

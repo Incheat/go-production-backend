@@ -1,4 +1,5 @@
-package jwt
+// Package token defines the JWT maker for the auth service.
+package token
 
 import (
 	"time"
@@ -13,7 +14,7 @@ type JWTMaker struct {
 	expire time.Duration
 }
 
-// NewMaker creates a new JWT maker.
+// NewJWTMaker creates a new JWT maker.
 func NewJWTMaker(secret string, minutes int) *JWTMaker {
 	return &JWTMaker{
 		secret: []byte(secret),
@@ -38,7 +39,7 @@ func (m *JWTMaker) CreateToken(ID string) (model.AccessToken, error) {
 // ParseToken parses the ID from a JWT token.
 // Returns the ID if the token is valid, otherwise returns an error.
 func (m *JWTMaker) ParseToken(tokenStr string) (string, error) {
-	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenStr, func(_ *jwt.Token) (interface{}, error) {
 		return m.secret, nil
 	})
 	if err != nil || !token.Valid {

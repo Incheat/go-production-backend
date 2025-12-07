@@ -1,6 +1,10 @@
+// Package model defines the models for the auth service.
 package model
 
+// AccessToken is a string that represents an access token.
 type AccessToken string
+
+// RefreshToken is a string that represents a refresh token.
 type RefreshToken string
 
 // type RefreshToken struct {

@@ -1,16 +1,20 @@
+// Package config defines the configuration for the auth service.
 package config
 
+// EnvName is the name of the environment.
 type EnvName string
 
 const (
-    EnvDev     EnvName = "dev"
-    EnvStaging EnvName = "staging"
-    EnvProd    EnvName = "prod"
+	// EnvDev is the development environment.
+	EnvDev EnvName = "dev"
+	// EnvStaging is the staging environment.
+	EnvStaging EnvName = "staging"
+	// EnvProd is the production environment.
+	EnvProd EnvName = "prod"
 )
 
 // Config is the configuration for the application.
 type Config struct {
-
 	Env EnvName `koanf:"env"`
 
 	Server struct {
@@ -37,9 +41,9 @@ type Config struct {
 	} `koanf:"jwt"`
 
 	Refresh struct {
-		NumBytes int `koanf:"num_bytes"`
+		NumBytes int    `koanf:"num_bytes"`
 		EndPoint string `koanf:"end_point"`
-		MaxAge int `koanf:"max_age"` // seconds
+		MaxAge   int    `koanf:"max_age"` // seconds
 	} `koanf:"refresh"`
 }
 

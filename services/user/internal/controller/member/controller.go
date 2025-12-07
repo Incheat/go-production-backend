@@ -1,3 +1,4 @@
+// Package member defines the controller for the member service.
 package member
 
 import (
@@ -10,7 +11,7 @@ import (
 	"github.com/incheat/go-playground/services/user/pkg/model"
 )
 
-// ErrNotFound is returned when a requested record is not found.
+// ErrMemberNotFound is returned when a member is not found.
 var ErrMemberNotFound = errors.New("member not found")
 
 // ErrMemberAlreadyExists is returned when a member already exists.
@@ -18,18 +19,17 @@ var ErrMemberAlreadyExists = errors.New("member already exists")
 
 // Controller is the controller for the auth API.
 type Controller struct {
-	memberRepo MemberRepository
+	memberRepo Repository
 }
 
-// AuthRepository is the interface for the auth repository.
-type MemberRepository interface {
+// Repository is the interface for the member repository.
+type Repository interface {
 	GetMemberByEmail(ctx context.Context, email string) (*model.Member, error)
 	CreateMember(ctx context.Context, email string, member *model.Member) error
 }
 
-
 // NewController creates a new Controller.
-func NewController(memberRepo MemberRepository) *Controller {
+func NewController(memberRepo Repository) *Controller {
 	return &Controller{memberRepo: memberRepo}
 }
 
@@ -38,7 +38,7 @@ func (c *Controller) GetMemberByEmail(ctx context.Context, email string) (*model
 	member, err := c.memberRepo.GetMemberByEmail(ctx, email)
 	if err != nil && errors.Is(err, repository.ErrMemberNotFound) {
 		return nil, ErrMemberNotFound
-	}else if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 	return member, nil
@@ -49,9 +49,9 @@ func (c *Controller) CreateMember(ctx context.Context, member *model.Member) err
 	member.ID = uuid.New().String()
 	member.CreatedAt = time.Now()
 	err := c.memberRepo.CreateMember(ctx, member.Email, member)
-		if err != nil && errors.Is(err, repository.ErrMemberAlreadyExists) {
+	if err != nil && errors.Is(err, repository.ErrMemberAlreadyExists) {
 		return ErrMemberAlreadyExists
-	}else if err != nil {
+	} else if err != nil {
 		return err
 	}
 	return nil

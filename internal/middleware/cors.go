@@ -1,3 +1,4 @@
+// Package middleware defines the middleware for the application.
 package middleware
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// CORSRule is a rule that defines the CORS configuration for a specific path.
 type CORSRule struct {
 	Path           string
 	AllowedOrigins []string

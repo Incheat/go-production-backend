@@ -1,4 +1,5 @@
-package http
+// Package handler defines the handlers for the Auth API.
+package handler
 
 import (
 	"context"
@@ -17,14 +18,13 @@ type Handler struct {
 	ctrl *auth.Controller
 }
 
-// NewServer creates a new Server.
+// NewHandler creates a new Handler.
 func NewHandler(ctrl *auth.Controller) *Handler {
 	return &Handler{ctrl: ctrl}
 }
 
 // Login is the handler for the Login endpoint.
 func (h *Handler) Login(ctx context.Context, request gen.LoginRequestObject) (gen.LoginResponseObject, error) {
-	
 	email := string(request.Body.Email)
 	password := request.Body.Password
 	success, err := h.ctrl.LoginWithEmailAndPassword(ctx, email, password)
@@ -59,9 +59,9 @@ func (h *Handler) Login(ctx context.Context, request gen.LoginRequestObject) (ge
 	refreshTokenEndPoint := fmt.Sprintf("/%s/%s", constant.APIResponseVersionV1, h.ctrl.RefreshTokenRefreshEndPoint())
 	setCookie := fmt.Sprintf("refresh_token=%s; HttpOnly; Secure; SameSite=Lax; Path=%s; Max-Age=%d", refreshTokenStr, refreshTokenEndPoint, refreshTokenMaxAge)
 
-	return gen.Login200JSONResponse	{
+	return gen.Login200JSONResponse{
 		Body: gen.AuthResponse{
-			AccessToken:  &accessTokenStr,
+			AccessToken: &accessTokenStr,
 		},
 		Headers: gen.Login200ResponseHeaders{
 			VersionId: constant.APIResponseVersionV1,
@@ -71,7 +71,7 @@ func (h *Handler) Login(ctx context.Context, request gen.LoginRequestObject) (ge
 }
 
 // Logout is the handler for the Logout endpoint.
-func (h *Handler) Logout(ctx context.Context, request gen.LogoutRequestObject) (gen.LogoutResponseObject, error) {
+func (h *Handler) Logout(_ context.Context, _ gen.LogoutRequestObject) (gen.LogoutResponseObject, error) {
 	return gen.Logout204Response{
 		Headers: gen.Logout204ResponseHeaders{
 			VersionId: constant.APIResponseVersionV1,

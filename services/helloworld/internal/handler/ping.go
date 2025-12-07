@@ -1,3 +1,4 @@
+// Package handler defines the handlers for the Ping API.
 package handler
 
 import (
@@ -15,12 +16,12 @@ type Server struct{}
 
 // NewServer creates a new Server.
 func NewServer() *Server {
-    return &Server{}
+	return &Server{}
 }
 
 // PingV1 is the handler for the PingV1 endpoint.
 // It returns a 200 OK response with the message "pong" and the version ID "v1".
-func (s *Server) PingV1(ctx context.Context, request gen.PingV1RequestObject) (gen.PingV1ResponseObject, error) {
+func (s *Server) PingV1(_ context.Context, _ gen.PingV1RequestObject) (gen.PingV1ResponseObject, error) {
 	message := "pong"
 	return gen.PingV1200JSONResponse{
 		Body: gen.PingResponseV1{
@@ -34,7 +35,7 @@ func (s *Server) PingV1(ctx context.Context, request gen.PingV1RequestObject) (g
 
 // PingV2 is the handler for the PingV2 endpoint.
 // It returns a 200 OK response with the message "pong" and the version ID "v2".
-func (s *Server) PingV2(ctx context.Context, request gen.PingV2RequestObject) (gen.PingV2ResponseObject, error) {
+func (s *Server) PingV2(_ context.Context, _ gen.PingV2RequestObject) (gen.PingV2ResponseObject, error) {
 	message := "pong"
 	return gen.PingV2200JSONResponse{
 		Body: gen.PingResponseV2{

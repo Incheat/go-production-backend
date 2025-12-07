@@ -1,3 +1,4 @@
+// Package oapi defines the validator for the OpenAPI specification.
 package oapi
 
 import (
@@ -9,11 +10,11 @@ import (
 
 // ValidatorConfig is the configuration for the validator.
 type ValidatorConfig struct {
-	ProdMode        bool
-	ProdError      string
-	Logger         func(format string, args ...any)
+	ProdMode  bool
+	ProdError string
+	Logger    func(format string, args ...any)
 }
-	
+
 // NewValidatorOptions creates a new validator options.
 // If ProdMode is true, the validator will return a production error message.
 // If ProdMode is false, the validator will return a development error message.

@@ -1,3 +1,4 @@
+// Package main defines the main function for the helloworld service.
 package main
 
 import (
@@ -50,7 +51,7 @@ func main() {
 	}
 
 	log.Fatal(s.ListenAndServe())
-	
+
 }
 
 func convertCORSRules(cfg *config.Config) []middleware.CORSRule {

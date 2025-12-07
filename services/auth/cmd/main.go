@@ -1,3 +1,4 @@
+// Package main defines the main function for the auth service.
 package main
 
 import (
@@ -11,10 +12,9 @@ import (
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/oapi/public/server"
 	"github.com/incheat/go-playground/services/auth/internal/config"
 	"github.com/incheat/go-playground/services/auth/internal/controller/auth"
-	httphandler "github.com/incheat/go-playground/services/auth/internal/handler/http"
+	handler "github.com/incheat/go-playground/services/auth/internal/handler/http"
 	localmiddleware "github.com/incheat/go-playground/services/auth/internal/middleware"
-	jwtmaker "github.com/incheat/go-playground/services/auth/internal/token/jwt"
-	opaquemaker "github.com/incheat/go-playground/services/auth/internal/token/opaque"
+	"github.com/incheat/go-playground/services/auth/internal/token"
 	ginmiddleware "github.com/oapi-codegen/gin-middleware"
 	"go.uber.org/zap"
 )
@@ -23,7 +23,6 @@ func main() {
 
 	cfg := config.MustLoad()
 	logger := initLogger(cfg.Env)
-
 
 	logger.Info("Starting auth service", zap.String("env", string(cfg.Env)))
 	logger.Info("Server port", zap.Int("port", cfg.Server.Port))
@@ -40,8 +39,8 @@ func main() {
 	r.Use(
 		globalmiddleware.PathBasedCORS(convertCORSRules(cfg)),
 		localmiddleware.ZapLogger(logger),
-    	localmiddleware.ZapRecovery(logger),
-    	localmiddleware.RequestID(),
+		localmiddleware.ZapRecovery(logger),
+		localmiddleware.RequestID(),
 	)
 
 	// Validate requests against the OpenAPI schema.
@@ -52,10 +51,10 @@ func main() {
 		}),
 	))
 
-	jwt := jwtmaker.NewJWTMaker(cfg.JWT.Secret, cfg.JWT.Expire)
-	opaque := opaquemaker.NewOpaqueMaker(cfg.Refresh.NumBytes, cfg.Refresh.MaxAge, cfg.Refresh.EndPoint)
+	jwt := token.NewJWTMaker(cfg.JWT.Secret, cfg.JWT.Expire)
+	opaque := token.NewOpaqueMaker(cfg.Refresh.NumBytes, cfg.Refresh.MaxAge, cfg.Refresh.EndPoint)
 	ctrl := auth.NewController(jwt, opaque, nil)
-	srv := httphandler.NewHandler(ctrl)
+	srv := handler.NewHandler(ctrl)
 	handler := servergen.NewStrictHandler(srv, nil)
 	servergen.RegisterHandlers(r, handler)
 
@@ -68,23 +67,23 @@ func main() {
 }
 
 func initLogger(env config.EnvName) *zap.Logger {
-    switch env {
-    case config.EnvDev, config.EnvStaging:
-        return zap.Must(zap.NewDevelopment())
-    default:
-        return zap.Must(zap.NewProduction())
-    }
+	switch env {
+	case config.EnvDev, config.EnvStaging:
+		return zap.Must(zap.NewDevelopment())
+	default:
+		return zap.Must(zap.NewProduction())
+	}
 }
 
 func initGin(env config.EnvName) *gin.Engine {
-    switch env {
-    case config.EnvDev, config.EnvStaging:
-        gin.SetMode(gin.DebugMode)
+	switch env {
+	case config.EnvDev, config.EnvStaging:
+		gin.SetMode(gin.DebugMode)
 		return gin.New()
-    default:
-        gin.SetMode(gin.ReleaseMode)
-        return gin.New()
-    }
+	default:
+		gin.SetMode(gin.ReleaseMode)
+		return gin.New()
+	}
 }
 
 func convertCORSRules(cfg *config.Config) []globalmiddleware.CORSRule {

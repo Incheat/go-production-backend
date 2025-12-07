@@ -1,3 +1,4 @@
+// Package auth defines the controller for the auth API.
 package auth
 
 import (
@@ -9,9 +10,9 @@ import (
 
 // Controller is the controller for the auth API.
 type Controller struct {
-	accessToken AccessTokenMaker
+	accessToken  AccessTokenMaker
 	refreshToken RefreshTokenMaker
-	redis RedisClient
+	redis        RedisClient
 }
 
 // RedisClient is the interface for the Redis client.
@@ -20,13 +21,13 @@ type RedisClient interface {
 	Del(ctx context.Context, keys ...string) error
 }
 
-// AccessToken is the interface for the access token.
+// AccessTokenMaker is the interface for the access token maker.
 type AccessTokenMaker interface {
 	CreateToken(ID string) (model.AccessToken, error)
 	ParseToken(token string) (string, error)
 }
 
-// RefreshToken is the interface for the refresh token.
+// RefreshTokenMaker is the interface for the refresh token maker.
 type RefreshTokenMaker interface {
 	CreateToken() (model.RefreshToken, error)
 	MaxAge() int
@@ -39,11 +40,11 @@ func NewController(accessToken AccessTokenMaker, refreshToken RefreshTokenMaker,
 }
 
 // LoginWithEmailAndPassword logs in a user with email and password.
-func (c *Controller) LoginWithEmailAndPassword(ctx context.Context, email string, password string) (bool, error) {
+func (c *Controller) LoginWithEmailAndPassword(_ context.Context, _ string, _ string) (bool, error) {
 	return true, nil
 }
 
-// GenerateAccessToken generates a new access token.
+// GenerateAccessTokenByID generates a new access token by ID.
 func (c *Controller) GenerateAccessTokenByID(ID string) (model.AccessToken, error) {
 	accessToken, err := c.accessToken.CreateToken(ID)
 	if err != nil {

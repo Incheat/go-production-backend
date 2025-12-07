@@ -1,3 +1,4 @@
+// Package memory defines the memory repository for the member service.
 package memory
 
 import (
@@ -8,20 +9,20 @@ import (
 	"github.com/incheat/go-playground/services/user/pkg/model"
 )
 
-// Repository defines a memory movie metadata repository.
+// MemberRepository defines a memory member repository.
 type MemberRepository struct {
 	sync.RWMutex
 	data map[string]*model.Member
 }
 
-// NewRepository creates a new memory movie metadata repository.
+// NewMemberRepository creates a new memory member repository.
 func NewMemberRepository() *MemberRepository {
 	return &MemberRepository{
 		data: make(map[string]*model.Member),
 	}
 }
 
-// GetMemberByEmail retrieves a member by email.
+// GetMemberByEmail gets a member by email.
 func (r *MemberRepository) GetMemberByEmail(_ context.Context, email string) (*model.Member, error) {
 	r.RLock()
 	defer r.RUnlock()

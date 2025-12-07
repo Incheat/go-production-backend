@@ -1,4 +1,5 @@
-package opaque
+// Package token defines the Opaque maker for the auth service.
+package token
 
 import (
 	"crypto/rand"
@@ -8,9 +9,10 @@ import (
 	"github.com/incheat/go-playground/services/auth/pkg/model"
 )
 
+// OpaqueMaker is a Opaque maker.
 type OpaqueMaker struct {
-	numBytes int
-	maxAge int
+	numBytes        int
+	maxAge          int
 	refreshEndPoint string
 }
 
