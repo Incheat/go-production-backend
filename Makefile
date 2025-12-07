@@ -80,32 +80,36 @@ GEN_INTERNAL_CLIENT_FILE := $(GEN_INTERNAL_DIR)/client.gen.go
 .PHONY: generate
 
 generate:
-	@echo "Generating public API code for service: $(SERVICE)"
-	@if [ ! -f "$(PUBLIC_OPENAPI)" ]; then \
-		echo "Error: $(PUBLIC_OPENAPI) not found!"; \
-		exit 1; \
+	@echo "=== Generating API code for service: $(SERVICE) ==="
+
+	# -------------------------------
+	# PUBLIC API (skip if missing)
+	# -------------------------------
+	@if [ -f "$(PUBLIC_OPENAPI)" ]; then \
+		echo "-- Public OpenAPI found: $(PUBLIC_OPENAPI)"; \
+		mkdir -p $(GEN_PUBLIC_DIR); \
+		oapi-codegen --config $(PUBLIC_SERVER_CONFIG) $(PUBLIC_OPENAPI); \
+		oapi-codegen --config $(PUBLIC_CLIENT_CONFIG) $(PUBLIC_OPENAPI); \
+		echo "✓ Public API generation completed for $(SERVICE)"; \
+	else \
+		echo "⚠ Skipping PUBLIC API: $(PUBLIC_OPENAPI) not found."; \
 	fi
-	mkdir -p $(GEN_PUBLIC_DIR)
-	oapi-codegen \
-		--config $(PUBLIC_SERVER_CONFIG) \
-		$(PUBLIC_OPENAPI)
-	oapi-codegen \
-		--config $(PUBLIC_CLIENT_CONFIG) \
-		$(PUBLIC_OPENAPI)
-	@echo "Done: $(GEN_PUBLIC_SERVER_FILE) $(GEN_PUBLIC_CLIENT_FILE)"
-	@echo "Generating internal API code for service: $(SERVICE)"
-	@if [ ! -f "$(INTERNAL_OPENAPI)" ]; then \
-		echo "Error: $(INTERNAL_OPENAPI) not found!"; \
-		exit 1; \
+
+	# -------------------------------
+	# INTERNAL API (skip if missing)
+	# -------------------------------
+	@if [ -f "$(INTERNAL_OPENAPI)" ]; then \
+		echo "-- Internal OpenAPI found: $(INTERNAL_OPENAPI)"; \
+		mkdir -p $(GEN_INTERNAL_DIR); \
+		oapi-codegen --config $(INTERNAL_SERVER_CONFIG) $(INTERNAL_OPENAPI); \
+		oapi-codegen --config $(INTERNAL_CLIENT_CONFIG) $(INTERNAL_OPENAPI); \
+		echo "✓ Internal API generation completed for $(SERVICE)"; \
+	else \
+		echo "⚠ Skipping INTERNAL API: $(INTERNAL_OPENAPI) not found."; \
 	fi
-	mkdir -p $(GEN_INTERNAL_DIR)
-	oapi-codegen \
-		--config $(INTERNAL_SERVER_CONFIG) \
-		$(INTERNAL_OPENAPI)
-	oapi-codegen \
-		--config $(INTERNAL_CLIENT_CONFIG) \
-		$(INTERNAL_OPENAPI)
-	@echo "Done: $(GEN_INTERNAL_SERVER_FILE) $(GEN_INTERNAL_CLIENT_FILE)"
+
+	@echo "=== Done for service: $(SERVICE) ==="
+
 
 # ----------------------------------------
 # Generate code for ALL services
@@ -116,12 +120,8 @@ SERVICES := $(shell ls api)
 generate-all:
 	@echo "Generating API code for ALL services: $(SERVICES)"
 	@for svc in $(SERVICES); do \
-		if [ -f "api/$$svc/oapi/public.yaml" ] && [ -f "api/$$svc/oapi/internal.yaml" ]; then \
-			echo "==> Generating for $$svc"; \
-			$(MAKE) generate SERVICE=$$svc; \
-		else \
-			echo "Skipping $$svc (missing OpenAPI files)"; \
-		fi; \
+		echo "Generating API code for service: $$svc"; \
+		$(MAKE) generate SERVICE=$$svc; \
 	done
 	@echo "All services updated."
 
