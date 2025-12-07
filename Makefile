@@ -116,7 +116,12 @@ SERVICES := $(shell ls api)
 generate-all:
 	@echo "Generating API code for ALL services: $(SERVICES)"
 	@for svc in $(SERVICES); do \
-		$(MAKE) generate SERVICE=$$svc; \
+		if [ -f "api/$$svc/oapi/public.yaml" ] && [ -f "api/$$svc/oapi/internal.yaml" ]; then \
+			echo "==> Generating for $$svc"; \
+			$(MAKE) generate SERVICE=$$svc; \
+		else \
+			echo "Skipping $$svc (missing OpenAPI files)"; \
+		fi; \
 	done
 	@echo "All services updated."
 
