@@ -56,6 +56,7 @@ func (c *Controller) LoginWithEmailAndPassword(ctx context.Context, email string
 
 	now := time.Now()
 	maxAge := c.refreshToken.MaxAge()
+	refreshEndPoint := c.refreshToken.RefreshEndPoint()
 
 	refreshTokenSession := &model.RefreshTokenSession{
 		ID:        uuid.NewString(),
@@ -75,6 +76,6 @@ func (c *Controller) LoginWithEmailAndPassword(ctx context.Context, email string
 		AccessToken:      accessToken,
 		RefreshToken:     refreshToken,
 		RefreshMaxAgeSec: maxAge,
-		RefreshEndPoint:  c.refreshToken.RefreshEndPoint(),
+		RefreshEndPoint:  refreshEndPoint,
 	}, nil
 }
