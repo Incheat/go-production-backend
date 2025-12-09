@@ -1,7 +1,8 @@
 package: server            # generated package name
 
 generate:
-  gin-server: true      # ★ Gin server
+  #gin-server: true      # ★ Gin server
+  chi-server: true      # ★ Chi server
   strict-server: true   # ★ Strict server interface
   models: true          # schema -> Go struct
   embedded-spec: true   # optional, embed the OpenAPI specification into the program

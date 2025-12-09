@@ -7,18 +7,17 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
-	globalmiddleware "github.com/incheat/go-playground/internal/middleware/gin"
+	"github.com/go-chi/chi/v5"
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/oapi/public/server"
 	"github.com/incheat/go-playground/services/auth/internal/config"
 	"github.com/incheat/go-playground/services/auth/internal/controller/auth"
 	handler "github.com/incheat/go-playground/services/auth/internal/handler/http"
-	localmiddleware "github.com/incheat/go-playground/services/auth/internal/middleware/gin"
 	memoryrepo "github.com/incheat/go-playground/services/auth/internal/repository/memory"
 	"github.com/incheat/go-playground/services/auth/internal/token"
-	ginmiddleware "github.com/oapi-codegen/gin-middleware"
+	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -35,22 +34,6 @@ func main() {
 		log.Fatalf("Error loading swagger spec: %v", err)
 	}
 
-	r := initGin(cfg.Env)
-
-	// Apply CORS rules based on the request path.
-	r.Use(
-		globalmiddleware.PathBasedCORS(convertCORSRules(cfg)),
-		ginmiddleware.OapiRequestValidatorWithOptions(
-			swagger,
-			globalmiddleware.NewValidatorOptions(globalmiddleware.ValidatorConfig{
-				ProdMode: cfg.Env == config.EnvProd,
-			}),
-		),
-		localmiddleware.RequestID(),
-		localmiddleware.ZapLogger(logger),
-		localmiddleware.ZapRecovery(logger),
-	)
-
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     cfg.Redis.Addr,
 		Password: cfg.Redis.Password,
@@ -63,24 +46,31 @@ func main() {
 	logger.Info("Redis connected", zap.String("addr", cfg.Redis.Addr))
 	defer func() {
 		if err := rdb.Close(); err != nil {
-			log.Printf("failed to close redis: %v", err)
+			logger.Info("failed to close redis: %v", zap.String("error", err.Error()))
 		}
 	}()
+
+	r := chi.NewRouter()
+	r.Use(nethttpmiddleware.OapiRequestValidator(swagger))
 
 	refreshTokenRepo := memoryrepo.NewRefreshTokenRepository()
 	jwt := token.NewJWTMaker(cfg.JWT.Secret, cfg.JWT.Expire)
 	opaque := token.NewOpaqueMaker(cfg.Refresh.NumBytes, cfg.Refresh.MaxAge, cfg.Refresh.EndPoint)
 	ctrl := auth.NewController(jwt, opaque, refreshTokenRepo)
 	srv := handler.NewHandler(ctrl)
-	handler := servergen.NewStrictHandler(srv, nil)
-	servergen.RegisterHandlers(r, handler)
+	strictServer := servergen.NewStrictHandler(srv, nil)
+	h := servergen.HandlerFromMux(strictServer, r)
 
-	s := &http.Server{
-		Handler: r,
-		Addr:    fmt.Sprintf(":%d", cfg.Server.Port),
+	var g errgroup.Group
+
+	g.Go(func() error {
+		return http.ListenAndServe(fmt.Sprintf(":%d", cfg.Server.Port), h)
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Fatal(err)
 	}
 
-	log.Fatal(s.ListenAndServe())
 }
 
 func initLogger(env config.EnvName) *zap.Logger {
@@ -92,24 +82,13 @@ func initLogger(env config.EnvName) *zap.Logger {
 	}
 }
 
-func initGin(env config.EnvName) *gin.Engine {
-	switch env {
-	case config.EnvDev, config.EnvStaging:
-		gin.SetMode(gin.DebugMode)
-		return gin.New()
-	default:
-		gin.SetMode(gin.ReleaseMode)
-		return gin.New()
-	}
-}
-
-func convertCORSRules(cfg *config.Config) []globalmiddleware.CORSRule {
-	corsRules := make([]globalmiddleware.CORSRule, len(cfg.CORS.Rules))
-	for i, rule := range cfg.CORS.Rules {
-		corsRules[i] = globalmiddleware.CORSRule{
-			Path:           rule.Path,
-			AllowedOrigins: rule.AllowedOrigins,
-		}
-	}
-	return corsRules
-}
+// func convertCORSRules(cfg *config.Config) []globalmiddleware.CORSRule {
+// 	corsRules := make([]globalmiddleware.CORSRule, len(cfg.CORS.Rules))
+// 	for i, rule := range cfg.CORS.Rules {
+// 		corsRules[i] = globalmiddleware.CORSRule{
+// 			Path:           rule.Path,
+// 			AllowedOrigins: rule.AllowedOrigins,
+// 		}
+// 	}
+// 	return corsRules
+// }
