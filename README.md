@@ -15,8 +15,10 @@ This project is a Go-based backend service designed with clean architecture prin
 ### **Languages & Frameworks**
 
 * **Go** — primary backend language
-* **Gin** — high‑performance HTTP framework
+* **Gin** — high‑performance HTTP framework -> not fully compatible with strict-server
+* **Chi** - Chi + strict-server is more API-first
 * **GORM** — ORM for database access
+* **SQLC** - 
 
 ### **Databases & Caching**
 
