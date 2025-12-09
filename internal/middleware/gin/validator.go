@@ -1,5 +1,5 @@
-// Package oapi defines the validator for the OpenAPI specification.
-package oapi
+// Package middleware defines the validator for the OpenAPI specification.
+package middleware
 
 import (
 	"log"

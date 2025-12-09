@@ -8,8 +8,7 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
-	"github.com/incheat/go-playground/internal/middleware"
-	"github.com/incheat/go-playground/internal/oapi"
+	middleware "github.com/incheat/go-playground/internal/middleware/gin"
 	servergen "github.com/incheat/go-playground/services/helloworld/internal/api/gen/oapi/public/server"
 	"github.com/incheat/go-playground/services/helloworld/internal/config"
 	"github.com/incheat/go-playground/services/helloworld/internal/handler"
@@ -36,7 +35,7 @@ func main() {
 	// Validate requests against the OpenAPI schema.
 	r.Use(ginmiddleware.OapiRequestValidatorWithOptions(
 		swagger,
-		oapi.NewValidatorOptions(oapi.ValidatorConfig{
+		middleware.NewValidatorOptions(middleware.ValidatorConfig{
 			ProdMode: env == "prod",
 		}),
 	))

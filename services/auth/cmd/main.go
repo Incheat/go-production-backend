@@ -8,8 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	globalmiddleware "github.com/incheat/go-playground/internal/middleware"
-	"github.com/incheat/go-playground/internal/oapi"
+	globalmiddleware "github.com/incheat/go-playground/internal/middleware/gin"
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/oapi/public/server"
 	"github.com/incheat/go-playground/services/auth/internal/config"
 	"github.com/incheat/go-playground/services/auth/internal/controller/auth"
@@ -43,7 +42,7 @@ func main() {
 		globalmiddleware.PathBasedCORS(convertCORSRules(cfg)),
 		ginmiddleware.OapiRequestValidatorWithOptions(
 			swagger,
-			oapi.NewValidatorOptions(oapi.ValidatorConfig{
+			globalmiddleware.NewValidatorOptions(globalmiddleware.ValidatorConfig{
 				ProdMode: cfg.Env == config.EnvProd,
 			}),
 		),
