@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	globalchimiddleware "github.com/incheat/go-playground/internal/middleware/chi"
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/oapi/public/server"
 	"github.com/incheat/go-playground/services/auth/internal/config"
 	authhandler "github.com/incheat/go-playground/services/auth/internal/handler/http"
@@ -56,6 +57,7 @@ func main() {
 	// HTTP router
 	router := chi.NewRouter()
 	router.Use(nethttpmiddleware.OapiRequestValidator(openAPISpec))
+	router.Use(globalchimiddleware.PathBasedCORS(convertCORSRules(cfg)))
 
 	// Auth components
 	refreshTokenRepository := memoryrepo.NewRefreshTokenRepository()
@@ -94,13 +96,13 @@ func initLogger(env config.EnvName) *zap.Logger {
 	}
 }
 
-// func convertCORSRules(cfg *config.Config) []globalmiddleware.CORSRule {
-// 	corsRules := make([]globalmiddleware.CORSRule, len(cfg.CORS.Rules))
-// 	for i, rule := range cfg.CORS.Rules {
-// 		corsRules[i] = globalmiddleware.CORSRule{
-// 			Path:           rule.Path,
-// 			AllowedOrigins: rule.AllowedOrigins,
-// 		}
-// 	}
-// 	return corsRules
-// }
+func convertCORSRules(cfg *config.Config) []globalchimiddleware.CORSRule {
+	corsRules := make([]globalchimiddleware.CORSRule, len(cfg.CORS.Rules))
+	for i, rule := range cfg.CORS.Rules {
+		corsRules[i] = globalchimiddleware.CORSRule{
+			Path:           rule.Path,
+			AllowedOrigins: rule.AllowedOrigins,
+		}
+	}
+	return corsRules
+}
