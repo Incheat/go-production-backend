@@ -56,7 +56,12 @@ func main() {
 
 	// HTTP router
 	router := chi.NewRouter()
-	router.Use(nethttpmiddleware.OapiRequestValidator(openAPISpec))
+	router.Use(nethttpmiddleware.OapiRequestValidatorWithOptions(
+		openAPISpec,
+		globalchimiddleware.NewValidatorOptions(globalchimiddleware.ValidatorConfig{
+			ProdMode: cfg.Env == config.EnvProd,
+		}),
+	))
 	router.Use(globalchimiddleware.PathBasedCORS(convertCORSRules(cfg)))
 
 	// Auth components
