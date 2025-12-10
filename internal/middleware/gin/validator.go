@@ -1,5 +1,5 @@
-// Package middleware defines the validator for the OpenAPI specification.
-package middleware
+// Package ginmiddleware defines the validator for the OpenAPI specification.
+package ginmiddleware
 
 import (
 	"log"

@@ -1,5 +1,5 @@
-// Package middleware defines the middleware for the application.
-package middleware
+// Package ginmiddleware defines the middleware for the application.
+package ginmiddleware
 
 import (
 	"time"
