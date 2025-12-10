@@ -1,5 +1,5 @@
-// Package middleware defines the middleware for the auth service.
-package middleware
+// Package ginmiddleware defines the middleware for the auth service.
+package ginmiddleware
 
 import (
 	"github.com/gin-gonic/gin"
