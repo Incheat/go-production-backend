@@ -70,8 +70,8 @@ func (c *UserVerificationClient) VerifyCredentials(email, password string) (*use
 		return nil, fmt.Errorf("do request: %w", err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			fmt.Printf("close response body: %v", err)
+		if cerr := resp.Body.Close(); cerr != nil {
+			fmt.Printf("close response body: %v", cerr)
 		}
 	}()
 
@@ -90,13 +90,12 @@ func (c *UserVerificationClient) VerifyCredentials(email, password string) (*use
 func TestVerifyUserCredentialsPact(t *testing.T) {
 	t.Parallel()
 
-	// Create the Pact mock provider (user-service)
-	mockProvider, err := consumer.NewV2Pact(consumer.MockHTTPProviderConfig{
+	// Create the Pact mock provider (user-service) using the **V4** mock provider
+	mockProvider, err := consumer.NewV4Pact(consumer.MockHTTPProviderConfig{
 		Consumer: "auth-service",
 		Provider: "user-service",
 
-		// You can tweak these to match your repo layout
-		// They’re relative to the module root when you run `go test`.
+		// Adjust to your repo layout as needed
 		PactDir: "./pacts",
 		LogDir:  "./logs",
 	})
@@ -110,8 +109,8 @@ func TestVerifyUserCredentialsPact(t *testing.T) {
 		AddInteraction().
 		Given("a user exists with this email and password").
 		UponReceiving("a request to verify valid user credentials").
-		WithRequest("POST", "/internal/users/verify",
-			func(b *consumer.V2RequestBuilder) {
+		WithRequest(http.MethodPost, "/internal/users/verify",
+			func(b *consumer.V4RequestBuilder) {
 				b.Header("Content-Type", matchers.String("application/json"))
 				b.Header("Accept", matchers.String("application/json"))
 				b.JSONBody(map[string]interface{}{
@@ -121,7 +120,7 @@ func TestVerifyUserCredentialsPact(t *testing.T) {
 			},
 		).
 		WillRespondWith(200,
-			func(r *consumer.V2ResponseBuilder) {
+			func(r *consumer.V4ResponseBuilder) {
 				r.Header("Content-Type", matchers.String("application/json; charset=utf-8"))
 				r.JSONBody(map[string]interface{}{
 					"id":     matchers.Like("8a26b19d-8a33-4ece-87b1-7b7c2fb9e0ad"),
