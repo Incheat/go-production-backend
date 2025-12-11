@@ -8,11 +8,12 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	globalchimiddleware "github.com/incheat/go-playground/internal/middleware/chi"
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/oapi/public/server"
 	"github.com/incheat/go-playground/services/auth/internal/config"
 	authhandler "github.com/incheat/go-playground/services/auth/internal/handler/http"
-	chimiddleware "github.com/incheat/go-playground/services/auth/internal/middleware/chi"
+	customchimiddleware "github.com/incheat/go-playground/services/auth/internal/middleware/chi"
 	redisrepo "github.com/incheat/go-playground/services/auth/internal/repository/redis"
 	authservice "github.com/incheat/go-playground/services/auth/internal/service/auth"
 	"github.com/incheat/go-playground/services/auth/internal/token"
@@ -29,6 +30,7 @@ func main() {
 
 	logger.Info("Starting auth service", zap.String("env", string(cfg.Env)))
 	logger.Info("Server port", zap.Int("port", cfg.Server.Port))
+	logger.Info("Connecting to Redis", zap.String("addr", cfg.Redis.Addr))
 
 	// Get OpenAPI definition from embedded spec
 	openAPISpec, err := servergen.GetSwagger()
@@ -43,18 +45,6 @@ func main() {
 		DB:       cfg.Redis.DB,
 	})
 
-	ctx := context.Background()
-	if err := redisClient.Ping(ctx).Err(); err != nil {
-		panic(fmt.Errorf("failed to connect to Redis: %w", err))
-	}
-
-	logger.Info("Connected to Redis", zap.String("addr", cfg.Redis.Addr))
-	defer func() {
-		if err := redisClient.Close(); err != nil {
-			logger.Warn("Failed to close Redis client", zap.Error(err))
-		}
-	}()
-
 	// HTTP router
 	router := chi.NewRouter()
 	router.Use(nethttpmiddleware.OapiRequestValidatorWithOptions(
@@ -64,10 +54,26 @@ func main() {
 		}),
 	))
 	router.Use(globalchimiddleware.PathBasedCORS(convertCORSRules(cfg)))
-	router.Use(chimiddleware.RequestID())
-	router.Use(chimiddleware.HTTPRequest())
-	router.Use(chimiddleware.ZapLogger(logger))
-	router.Use(chimiddleware.ZapRecovery(logger))
+	router.Use(customchimiddleware.RequestID())
+	router.Use(customchimiddleware.HTTPRequest())
+	router.Use(customchimiddleware.ZapLogger(logger))
+	router.Use(customchimiddleware.ZapRecovery(logger))
+	router.Use(chimiddleware.Heartbeat("/healthz"))
+	router.Use(chimiddleware.Heartbeat("/live"))
+	router.Get("/ready", func(w http.ResponseWriter, _ *http.Request) {
+		// check DB, cache, etc.
+		if err := redisClient.Ping(context.Background()).Err(); err != nil {
+			_, err := w.Write([]byte("not ready: " + err.Error()))
+			if err != nil {
+				logger.Error("failed to write response", zap.Error(err))
+			}
+			return
+		}
+		_, err := w.Write([]byte("ready"))
+		if err != nil {
+			logger.Error("failed to write response", zap.Error(err))
+		}
+	})
 
 	// Auth components
 	refreshTokenRepository := redisrepo.NewRefreshTokenRepository(redisClient)
