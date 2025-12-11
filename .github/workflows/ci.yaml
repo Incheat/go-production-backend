@@ -38,6 +38,12 @@ jobs:
           go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
+      - name: Install pact-go and libpact_ffi
+        run: |
+          go install github.com/pact-foundation/pact-go/v2@latest
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          pact-go -l DEBUG install
+
       - name: Generate API code for all services
         run: make generate-all
 
@@ -47,8 +53,16 @@ jobs:
           version: v2.7.1
           args: --timeout 5m
 
-      - name: Run Go tests with coverage
-        run: go test ./... -v -coverprofile=coverage.txt
+      - name: Run Go tests with coverage (excluding Pact tests)
+        run: |
+          # List all Go packages, exclude Pact test packages, then run go test on the rest
+          PKGS=$(go list ./... | grep -v '/test/pacts')
+          go test $PKGS -v -coverprofile=coverage.txt
+
+      - name: Run Pact tests
+        run: |
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          go test ./test/pacts/... -v
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
