@@ -45,7 +45,7 @@ jobs:
           mkdir -p "$PACT_LIB_DIR"
           go install github.com/pact-foundation/pact-go/v2@latest
           export PATH="$(go env GOPATH)/bin:$PATH"
-          pact-go -l DEBUG install --libDir "$PACT_LIB_DIR"
+          pact-go install --libDir "$PACT_LIB_DIR"
 
       - name: Generate API code for all services
         run: make generate-all
