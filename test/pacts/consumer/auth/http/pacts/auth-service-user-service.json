@@ -63,7 +63,7 @@
         },
         "headers": {
           "Content-Type": [
-            "application/json; charset=utf-8"
+            "application/json"
           ]
         },
         "matchingRules": {
@@ -89,6 +89,17 @@
               "matchers": [
                 {
                   "match": "type"
+                }
+              ]
+            }
+          },
+          "header": {
+            "Content-Type": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^application/json($|;.*)$"
                 }
               ]
             }

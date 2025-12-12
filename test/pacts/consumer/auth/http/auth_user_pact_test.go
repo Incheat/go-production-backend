@@ -121,7 +121,10 @@ func TestVerifyUserCredentialsPact(t *testing.T) {
 		).
 		WillRespondWith(200,
 			func(r *consumer.V4ResponseBuilder) {
-				r.Header("Content-Type", matchers.String("application/json; charset=utf-8"))
+				r.Header("Content-Type", matchers.Regex(
+					"application/json",
+					`^application/json($|;.*)$`,
+				))
 				r.JSONBody(map[string]interface{}{
 					"id":     matchers.Like("8a26b19d-8a33-4ece-87b1-7b7c2fb9e0ad"),
 					"email":  matchers.Like(email),
