@@ -1,9 +1,9 @@
 package: servergen            # generated package name
 
 generate:
-  gin-server: true      # ★ Gin server
+  chi-server: true      # ★ Chi server
   strict-server: true   # ★ Strict server interface
   models: true          # schema -> Go struct
   embedded-spec: true   # optional, embed the OpenAPI specification into the program
 
-output: services/auth/internal/api/gen/oapi/internal/server/server.gen.go  # generated file path
+output: services/user/internal/api/gen/oapi/private/server/server.gen.go  # generated file path

@@ -10,4 +10,6 @@ const (
 	EnvConfigDir = "config"
 	// EnvConfigTmpl is the template for the configuration files.
 	EnvConfigTmpl = "config.%s.yaml"
+	// APIResponseVersion is the version of the API response.
+	APIResponseVersion = "v0.1.0"
 )

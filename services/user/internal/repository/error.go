@@ -4,8 +4,8 @@ package repository
 import "errors"
 
 var (
-	// ErrMemberAlreadyExists is the error for when a member already exists.
-	ErrMemberAlreadyExists = errors.New("member already exists")
-	// ErrMemberNotFound is the error for when a member is not found.
-	ErrMemberNotFound = errors.New("member not found")
+	// ErrUserAlreadyExists is the error for when a user already exists.
+	ErrUserAlreadyExists = errors.New("user already exists")
+	// ErrUserNotFound is the error for when a user is not found.
+	ErrUserNotFound = errors.New("user not found")
 )

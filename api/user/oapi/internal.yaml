@@ -1,0 +1,65 @@
+openapi: 3.0.3
+info:
+  title: User Service API
+  version: 1.0.0
+
+paths:
+  /internal/users/verify:
+    post:
+      summary: Verify user credentials
+      operationId: VerifyUserCredentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCredentialsRequest'
+      responses:
+        '200':
+          description: User credentials verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCredentialsResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+components:
+  schemas:
+    UserCredentialsRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+
+    UserCredentialsResponse:
+      type: object
+      required: [id, email, status]
+      properties:
+        id:
+          type: string
+          description: User ID
+        email:
+          type: string
+          format: email
+        status:
+          type: string
+          description: User status
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: "invalid credentials"

@@ -1,12 +1,16 @@
 server:
-  port: 8081
+  port: 8082
 
 cors:
   rules:
-    - path: "/v1/*"
+    - path: "/*"
       allowed_origins:
         - "*"
-    - path: "/v2/*"
-      allowed_origins:
-        - "https://app.example.com"
-        - "https://cdn.example.com"
+
+mysql:
+  dsn: "auth:authpass@tcp(mysql:3306)/auth?parseTime=true"
+
+redis:
+  addr: "localhost:6379"
+  password: "test123"
+  db: 0
