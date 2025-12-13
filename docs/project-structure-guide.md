@@ -27,14 +27,14 @@ This guide describes a clean, scalable directory structure for Go applications�
 │         ├── internal/
 │         │     ├── api/             # OpenAPI-generated server interfaces
 │         │     │   ├── gen/         # oapi-codegen output (ignored by git)
-│         │     │   │   └── oapi/
-│         │     │   │       └── public/
-│         │     │   │       │   └── api_gen.go
-│         │     │   │       └── private/
-│         │     │   │           └── api_gen.go
-│         │     │   ├── router.go    # glue between generated interfaces and handlers
-│         │     │   └── db/
-│         │     │       └── db.go
+│         │     │   │   ├── oapi/
+│         │     │   │   │   ├── public/
+│         │     │   │   │   │   └── api_gen.go
+│         │     │   │   │   └── private/
+│         │     │   │   │       └── api_gen.go
+│         │     │   │   └── db/
+│         │     │   │       └── db.go
+│         │     │   └── router.go    # glue between generated interfaces and handlers
 │         │     ├── config/
 │         │     │   ├── config.go    # your Config struct
 │         │     │   └── loader.go    # your Load / MustLoad
@@ -55,8 +55,6 @@ This guide describes a clean, scalable directory structure for Go applications�
 │             ├── config.dev.yaml
 │             └── config.prod.yaml
 │── internal/            # Shared utilities (logger, middleware, helpers)
-│
-│── migrations/          # Database migrations (goose, migrate, etc.)
 │
 │── scripts/             # CI/CD scripts, build automation, deploy tooling
 │
