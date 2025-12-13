@@ -50,6 +50,17 @@ jobs:
       - name: Generate API code for all services
         run: make generate-all
 
+      - name: Install sqlc
+        run: |
+          go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          sqlc version
+
+      - name: Generate SQLC code for all services
+        run: |
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          make sqlc-all
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:

@@ -136,6 +136,33 @@ generate-all:
 	@echo "All services updated."
 
 # ----------------------------------------
+# Generate SQLC code for one service
+# ----------------------------------------
+.PHONY: sqlc
+
+sqlc:
+	@if [ -d "services/$(SERVICE)/db" ]; then \
+		echo "=== Generating SQLC code for service: $(SERVICE) ==="; \
+		cd services/$(SERVICE)/db && sqlc generate; \
+		echo "=== Done for service: $(SERVICE) ==="; \
+	else \
+		echo "=== Skip SQLC: services/$(SERVICE)/db not found ==="; \
+	fi
+
+# ----------------------------------------
+# Generate SQLC code for ALL services
+# ----------------------------------------
+.PHONY: sqlc-all
+
+sqlc-all:
+	@echo "=== Generating SQLC code for ALL services: $(SERVICES) ==="
+	@for svc in $(SERVICES); do \
+		echo "Generating SQLC code for service: $$svc"; \
+		$(MAKE) sqlc SERVICE=$$svc; \
+	done
+	@echo "All services updated."
+
+# ----------------------------------------
 # Run the auth service with different environments
 # ----------------------------------------
 # make run-dev SERVICE=auth
