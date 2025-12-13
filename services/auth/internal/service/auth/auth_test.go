@@ -8,6 +8,7 @@ import (
 
 	authservice "github.com/incheat/go-playground/services/auth/internal/service/auth"
 	"github.com/incheat/go-playground/services/auth/pkg/model"
+	usermodel "github.com/incheat/go-playground/services/user/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -60,6 +61,15 @@ func (m *MockRefreshTokenRepository) SaveRefreshTokenSession(
 	return args.Error(0)
 }
 
+type MockUserGateway struct {
+	mock.Mock
+}
+
+func (m *MockUserGateway) VerifyCredentials(ctx context.Context, email string, password string) (*usermodel.User, error) {
+	args := m.Called(ctx, email, password)
+	return args.Get(0).(*usermodel.User), args.Error(1)
+}
+
 // TestUnitLoginWithEmailAndPassword_Success tests the happy path for LoginWithEmailAndPassword.
 func TestUnitLoginWithEmailAndPassword_Success(t *testing.T) {
 	ctx := context.Background()
@@ -70,12 +80,23 @@ func TestUnitLoginWithEmailAndPassword_Success(t *testing.T) {
 	refreshToken := model.RefreshToken("refresh-token")
 	maxAge := 3600
 	endpoint := "/auth/refresh"
+	user := &usermodel.User{
+		ID:           "123",
+		Email:        email,
+		PasswordHash: "password",
+	}
 
 	accessMock := new(MockAccessTokenMaker)
 	refreshMock := new(MockRefreshTokenMaker)
 	repoMock := new(MockRefreshTokenRepository)
+	userGatewayMock := new(MockUserGateway)
 
 	// Expectations
+	userGatewayMock.
+		On("VerifyCredentials", mock.Anything, email, "password").
+		Return(user, nil).
+		Once()
+
 	accessMock.
 		On("CreateToken", email).
 		Return(accessToken, nil).
@@ -129,7 +150,7 @@ func TestUnitLoginWithEmailAndPassword_Success(t *testing.T) {
 		Return(nil).
 		Once()
 
-	ctrl := authservice.New(accessMock, refreshMock, repoMock)
+	ctrl := authservice.New(accessMock, refreshMock, repoMock, userGatewayMock)
 
 	result, err := ctrl.LoginWithEmailAndPassword(ctx, email, "password", userAgent, ip)
 	require.NoError(t, err)
@@ -153,13 +174,23 @@ func TestUnitLoginWithEmailAndPassword_Errors(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		setupMocks       func(a *MockAccessTokenMaker, r *MockRefreshTokenMaker, repo *MockRefreshTokenRepository)
+		setupMocks       func(a *MockAccessTokenMaker, r *MockRefreshTokenMaker, repo *MockRefreshTokenRepository, userGateway *MockUserGateway)
 		expectedErr      error
 		expectRepoCalled bool
 	}{
 		{
 			name: "access token error",
-			setupMocks: func(a *MockAccessTokenMaker, _ *MockRefreshTokenMaker, _ *MockRefreshTokenRepository) {
+			setupMocks: func(a *MockAccessTokenMaker, _ *MockRefreshTokenMaker, _ *MockRefreshTokenRepository, userGateway *MockUserGateway) {
+				user := &usermodel.User{
+					ID:           "123",
+					Email:        email,
+					PasswordHash: "password",
+				}
+
+				userGateway.On("VerifyCredentials", mock.Anything, email, "password").
+					Return(user, nil).
+					Once()
+
 				err := errors.New("access error")
 				a.On("CreateToken", email).
 					Return(model.AccessToken(""), err).
@@ -170,7 +201,17 @@ func TestUnitLoginWithEmailAndPassword_Errors(t *testing.T) {
 		},
 		{
 			name: "refresh token error",
-			setupMocks: func(a *MockAccessTokenMaker, r *MockRefreshTokenMaker, _ *MockRefreshTokenRepository) {
+			setupMocks: func(a *MockAccessTokenMaker, r *MockRefreshTokenMaker, _ *MockRefreshTokenRepository, userGateway *MockUserGateway) {
+				user := &usermodel.User{
+					ID:           "123",
+					Email:        email,
+					PasswordHash: "password",
+				}
+
+				userGateway.On("VerifyCredentials", mock.Anything, email, "password").
+					Return(user, nil).
+					Once()
+
 				a.On("CreateToken", email).
 					Return(model.AccessToken("access-token"), nil).
 					Once()
@@ -185,7 +226,17 @@ func TestUnitLoginWithEmailAndPassword_Errors(t *testing.T) {
 		},
 		{
 			name: "save session error",
-			setupMocks: func(a *MockAccessTokenMaker, r *MockRefreshTokenMaker, repo *MockRefreshTokenRepository) {
+			setupMocks: func(a *MockAccessTokenMaker, r *MockRefreshTokenMaker, repo *MockRefreshTokenRepository, userGateway *MockUserGateway) {
+				user := &usermodel.User{
+					ID:           "123",
+					Email:        email,
+					PasswordHash: "password",
+				}
+
+				userGateway.On("VerifyCredentials", mock.Anything, email, "password").
+					Return(user, nil).
+					Once()
+
 				a.On("CreateToken", email).
 					Return(model.AccessToken("access-token"), nil).
 					Once()
@@ -215,10 +266,11 @@ func TestUnitLoginWithEmailAndPassword_Errors(t *testing.T) {
 			accessMock := new(MockAccessTokenMaker)
 			refreshMock := new(MockRefreshTokenMaker)
 			repoMock := new(MockRefreshTokenRepository)
+			userGatewayMock := new(MockUserGateway)
 
-			tt.setupMocks(accessMock, refreshMock, repoMock)
+			tt.setupMocks(accessMock, refreshMock, repoMock, userGatewayMock)
 
-			ctrl := authservice.New(accessMock, refreshMock, repoMock)
+			ctrl := authservice.New(accessMock, refreshMock, repoMock, userGatewayMock)
 
 			result, err := ctrl.LoginWithEmailAndPassword(ctx, email, "password", "agent", "ip")
 			require.Error(t, err)

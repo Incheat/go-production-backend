@@ -11,6 +11,7 @@ import (
 	globalchimiddleware "github.com/incheat/go-playground/internal/middleware/chi"
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/oapi/public/server"
 	"github.com/incheat/go-playground/services/auth/internal/config"
+	usergateway "github.com/incheat/go-playground/services/auth/internal/gateway/user/http"
 	authhandler "github.com/incheat/go-playground/services/auth/internal/handler/http"
 	chimiddleware "github.com/incheat/go-playground/services/auth/internal/middleware/chi"
 	redisrepo "github.com/incheat/go-playground/services/auth/internal/repository/redis"
@@ -79,7 +80,8 @@ func main() {
 		cfg.Refresh.EndPoint,
 	)
 
-	authService := authservice.New(jwtTokenMaker, opaqueTokenMaker, refreshTokenRepository)
+	userGateway := usergateway.NewUserGateway("")
+	authService := authservice.New(jwtTokenMaker, opaqueTokenMaker, refreshTokenRepository, userGateway)
 	authImpl := authhandler.New(authService)
 
 	strict := servergen.NewStrictHandler(authImpl, nil)

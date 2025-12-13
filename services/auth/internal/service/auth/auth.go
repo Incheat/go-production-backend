@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/incheat/go-playground/services/auth/pkg/model"
+	usermodel "github.com/incheat/go-playground/services/user/pkg/model"
 )
 
 // Service is the service for the auth API.
@@ -14,6 +15,7 @@ type Service struct {
 	accessToken      AccessTokenMaker
 	refreshToken     RefreshTokenMaker
 	refreshTokenRepo RefreshTokenRepository
+	userGateway      UserGateway
 }
 
 // AccessTokenMaker is the interface for the access token maker.
@@ -34,15 +36,25 @@ type RefreshTokenRepository interface {
 	SaveRefreshTokenSession(ctx context.Context, session *model.RefreshTokenSession) error
 }
 
+// UserGateway is the interface for the user gateway.
+type UserGateway interface {
+	VerifyCredentials(ctx context.Context, email string, password string) (*usermodel.User, error)
+}
+
 // New creates a new Service.
-func New(accessToken AccessTokenMaker, refreshToken RefreshTokenMaker, refreshTokenRepo RefreshTokenRepository) *Service {
-	return &Service{accessToken: accessToken, refreshToken: refreshToken, refreshTokenRepo: refreshTokenRepo}
+func New(accessToken AccessTokenMaker, refreshToken RefreshTokenMaker, refreshTokenRepo RefreshTokenRepository, userGateway UserGateway) *Service {
+	return &Service{accessToken: accessToken, refreshToken: refreshToken, refreshTokenRepo: refreshTokenRepo, userGateway: userGateway}
 }
 
 // LoginWithEmailAndPassword logs in a user with email and password.
-func (s *Service) LoginWithEmailAndPassword(ctx context.Context, email string, _ string, userAgent, ipAddress string) (*LoginResult, error) {
+func (s *Service) LoginWithEmailAndPassword(ctx context.Context, email string, password string, userAgent, ipAddress string) (*LoginResult, error) {
 
-	memberID := email
+	user, err := s.userGateway.VerifyCredentials(ctx, email, password)
+	if err != nil {
+		return nil, err
+	}
+
+	memberID := user.Email
 
 	accessToken, err := s.accessToken.CreateToken(memberID)
 	if err != nil {
