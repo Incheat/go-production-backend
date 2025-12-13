@@ -40,6 +40,7 @@ This guide describes a clean, scalable directory structure for Go applications�
 │         │     │   ├── config.go    # your Config struct
 │         │     │   └── loader.go    # your Load / MustLoad
 │         │     ├── service(controller)/      # Business logic / domain controllers
+│         │     ├── gateway/     
 │         │     ├── handler/  # API handlers or StrictServerInterface implementation for (HTTP, gRPC)
 │         │     ├── security/        # Auth, RBAC, middleware
 │         │     ├── repository/      # Database & Redis implementations
