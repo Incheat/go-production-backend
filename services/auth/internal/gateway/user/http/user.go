@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	clientgen "github.com/incheat/go-playground/api/user/oapi/gen/private" // TODO: 改成你的生成路徑
+	clientgen "github.com/incheat/go-playground/api/user/oapi/gen/private"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	usermodel "github.com/incheat/go-playground/services/user/pkg/model"
