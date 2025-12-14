@@ -40,8 +40,9 @@ This guide describes a clean, scalable directory structure for Go applications�
 │         │     │   │               └── api_gen.go
 │         │     │   └── router.go    # glue between generated interfaces and handlers
 │         │     ├── db/
-│         │     │   └── gen/
-│         │     │       └── db.go
+│         │     │   └── mysql/
+│         │     │       └── gen/
+│         │     │           └── db.go
 │         │     ├── config/
 │         │     │   ├── config.go    # your Config struct
 │         │     │   └── loader.go    # your Load / MustLoad
@@ -53,11 +54,12 @@ This guide describes a clean, scalable directory structure for Go applications�
 │         │     └── test/      
 │         │         └── provider/    # auth_provider_pact_test.go # verifies pact files from all consumer in one provider test
 │         ├── db/
-│         │   ├── migrations/
-│         │   │   ├── 0001_init.up.sql
-│         │   │   └── 0001_init.down.sql
-│         │   ├── query.sql
-│         │   └── sqlc.yaml
+│         │   └── mysql/
+│         │       ├── migrations/
+│         │       │   ├── 0001_init.up.sql
+│         │       │   └── 0001_init.down.sql
+│         │       ├── query.sql
+│         │       └── sqlc.yaml
 │         └── config/                # YAML files, mounted in Docker, etc.
 │             ├── config.yaml
 │             ├── config.dev.yaml

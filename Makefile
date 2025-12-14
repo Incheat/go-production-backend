@@ -127,27 +127,31 @@ generate-all:
 # ----------------------------------------
 # Generate SQLC code for one service
 # ----------------------------------------
+DB ?= mysql
 .PHONY: sqlc
 
 sqlc:
-	@if [ -d "services/$(SERVICE)/db" ]; then \
+	@if [ -d "services/$(SERVICE)/db/$(DB)" ]; then \
 		echo "=== Generating SQLC code for service: $(SERVICE) ==="; \
-		cd services/$(SERVICE)/db && sqlc generate; \
+		cd services/$(SERVICE)/db/$(DB) && sqlc generate; \
 		echo "=== Done for service: $(SERVICE) ==="; \
 	else \
-		echo "=== Skip SQLC: services/$(SERVICE)/db not found ==="; \
+		echo "=== Skip SQLC: services/$(SERVICE)/db/$(DB) not found ==="; \
 	fi
 
 # ----------------------------------------
 # Generate SQLC code for ALL services
 # ----------------------------------------
+DBS := $(shell ls services/*/db)
 .PHONY: sqlc-all
 
 sqlc-all:
 	@echo "=== Generating SQLC code for ALL services: $(SERVICES) ==="
 	@for svc in $(SERVICES); do \
 		echo "Generating SQLC code for service: $$svc"; \
-		$(MAKE) sqlc SERVICE=$$svc; \
+		for db in $(DBS); do \
+			$(MAKE) sqlc SERVICE=$$svc DB=$$db; \
+		done; \
 	done
 	@echo "All services updated."
 

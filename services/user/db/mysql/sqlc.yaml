@@ -8,5 +8,5 @@ sql:
       go:
         package: "db"
         sql_package: "database/sql"
-        out: "../internal/db/gen/mysql"
+        out: "../../internal/db/mysql/gen"
         emit_json_tags: true

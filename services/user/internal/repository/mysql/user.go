@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
-	db "github.com/incheat/go-playground/services/user/internal/db/gen/mysql"
+	db "github.com/incheat/go-playground/services/user/internal/db/mysql/gen"
 	"github.com/incheat/go-playground/services/user/internal/repository"
 	"github.com/incheat/go-playground/services/user/pkg/model"
 )
