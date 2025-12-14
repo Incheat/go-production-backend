@@ -1,0 +1,10 @@
+# oapi-codegen.types.yaml
+package: typesgen
+
+generate:
+  models: true   # reuse the same model structure
+
+output: api/user/oapi/gen/private/type/types.gen.go
+
+output-options:
+  skip-prune: true

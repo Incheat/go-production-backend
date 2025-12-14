@@ -69,20 +69,20 @@ tools:
 SERVICE ?= helloworld
 
 # Paths based on SERVICE
-PUBLIC_SERVER_CONFIG := api/$(SERVICE)/oapi/public.server.yaml
-PUBLIC_CLIENT_CONFIG := api/$(SERVICE)/oapi/public.client.yaml
-INTERNAL_SERVER_CONFIG := api/$(SERVICE)/oapi/internal.server.yaml
-INTERNAL_CLIENT_CONFIG := api/$(SERVICE)/oapi/internal.client.yaml
-PUBLIC_OPENAPI := api/$(SERVICE)/oapi/public.yaml
-INTERNAL_OPENAPI := api/$(SERVICE)/oapi/internal.yaml
-API_DIR := services/$(SERVICE)/internal/api
-GEN_DIR := $(API_DIR)/gen
-GEN_PUBLIC_DIR := $(GEN_DIR)/oapi/public
-GEN_INTERNAL_DIR := $(GEN_DIR)/oapi/internal
-GEN_PUBLIC_SERVER_FILE := $(GEN_PUBLIC_DIR)/server.gen.go
-GEN_PUBLIC_CLIENT_FILE := $(GEN_PUBLIC_DIR)/client.gen.go
-GEN_INTERNAL_SERVER_FILE := $(GEN_INTERNAL_DIR)/server.gen.go
-GEN_INTERNAL_CLIENT_FILE := $(GEN_INTERNAL_DIR)/client.gen.go
+GLOBAL_OAPI_DIR := api/$(SERVICE)/oapi
+LOCAL_API_DIR := services/$(SERVICE)/internal/api/oapi
+
+PUBLIC_SERVER_CONFIG := $(GLOBAL_OAPI_DIR)/public.server.yaml
+INTERNAL_SERVER_CONFIG := $(GLOBAL_OAPI_DIR)/internal.server.yaml
+
+PUBLIC_CLIENT_CONFIG := $(GLOBAL_OAPI_DIR)/public.client.yaml
+INTERNAL_CLIENT_CONFIG := $(GLOBAL_OAPI_DIR)/internal.client.yaml
+
+PUBLIC_TYPES_CONFIG := $(GLOBAL_OAPI_DIR)/public.type.yaml
+INTERNAL_TYPES_CONFIG := $(GLOBAL_OAPI_DIR)/internal.type.yaml
+
+PUBLIC_OPENAPI := $(GLOBAL_OAPI_DIR)/public.yaml
+INTERNAL_OPENAPI := $(GLOBAL_OAPI_DIR)/internal.yaml
 
 # ----------------------------------------
 # Generate code for one service
@@ -92,34 +92,24 @@ GEN_INTERNAL_CLIENT_FILE := $(GEN_INTERNAL_DIR)/client.gen.go
 generate:
 	@echo "=== Generating API code for service: $(SERVICE) ==="
 
-	# -------------------------------
-	# PUBLIC API (skip if missing)
-	# -------------------------------
 	@if [ -f "$(PUBLIC_OPENAPI)" ]; then \
-		echo "-- Public OpenAPI found: $(PUBLIC_OPENAPI)"; \
-		mkdir -p $(GEN_PUBLIC_DIR); \
 		oapi-codegen --config $(PUBLIC_SERVER_CONFIG) $(PUBLIC_OPENAPI); \
 		oapi-codegen --config $(PUBLIC_CLIENT_CONFIG) $(PUBLIC_OPENAPI); \
+		oapi-codegen --config $(PUBLIC_TYPES_CONFIG) $(PUBLIC_OPENAPI); \
 		echo "✓ Public API generation completed for $(SERVICE)"; \
 	else \
 		echo "⚠ Skipping PUBLIC API: $(PUBLIC_OPENAPI) not found."; \
 	fi
 
-	# -------------------------------
-	# INTERNAL API (skip if missing)
-	# -------------------------------
 	@if [ -f "$(INTERNAL_OPENAPI)" ]; then \
-		echo "-- Internal OpenAPI found: $(INTERNAL_OPENAPI)"; \
-		mkdir -p $(GEN_INTERNAL_DIR); \
 		oapi-codegen --config $(INTERNAL_SERVER_CONFIG) $(INTERNAL_OPENAPI); \
 		oapi-codegen --config $(INTERNAL_CLIENT_CONFIG) $(INTERNAL_OPENAPI); \
+		oapi-codegen --config $(INTERNAL_TYPES_CONFIG) $(INTERNAL_OPENAPI); \
 		echo "✓ Internal API generation completed for $(SERVICE)"; \
 	else \
 		echo "⚠ Skipping INTERNAL API: $(INTERNAL_OPENAPI) not found."; \
 	fi
-
-	@echo "=== Done for service: $(SERVICE) ==="
-
+	@echo "\n"
 
 # ----------------------------------------
 # Generate code for ALL services
@@ -128,12 +118,11 @@ SERVICES := $(shell ls api)
 
 .PHONY: generate-all
 generate-all:
-	@echo "Generating API code for ALL services: $(SERVICES)"
+	@echo "\nGenerating API code for ALL services: $(SERVICES)\n"
 	@for svc in $(SERVICES); do \
-		echo "Generating API code for service: $$svc"; \
 		$(MAKE) generate SERVICE=$$svc; \
 	done
-	@echo "All services updated."
+	@echo "All services updated.\n"
 
 # ----------------------------------------
 # Generate SQLC code for one service

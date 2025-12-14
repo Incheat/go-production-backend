@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	globalchimiddleware "github.com/incheat/go-playground/internal/middleware/chi"
-	servergen "github.com/incheat/go-playground/services/user/internal/api/gen/oapi/private/server"
+	servergen "github.com/incheat/go-playground/services/user/internal/api/oapi/gen/private/server"
 	"github.com/incheat/go-playground/services/user/internal/config"
 	userhandler "github.com/incheat/go-playground/services/user/internal/handler/http"
 	chimiddleware "github.com/incheat/go-playground/services/user/internal/middleware/chi"

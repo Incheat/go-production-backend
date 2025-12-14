@@ -1,8 +1,0 @@
-# oapi-codegen.client.yaml
-package: clientgen
-
-generate:
-  client: true   # generate HTTP client
-  models: true   # reuse the same model structure
-
-output: services/user/internal/api/gen/oapi/public/client/client.gen.go

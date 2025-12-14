@@ -6,4 +6,4 @@ generate:
   models: true          # schema -> Go struct
   embedded-spec: true   # optional, embed the OpenAPI specification into the program
 
-output: services/user/internal/api/gen/oapi/private/server/server.gen.go  # generated file path
+output: services/user/internal/api/oapi/gen/private/server/server.gen.go  # generated file path

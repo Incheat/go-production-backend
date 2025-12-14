@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/http"
 
-	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/oapi/public/server"
+	servergen "github.com/incheat/go-playground/services/auth/internal/api/oapi/gen/public/server"
 	"github.com/incheat/go-playground/services/auth/internal/constant"
 	chimiddlewareutils "github.com/incheat/go-playground/services/auth/internal/middleware/chi/utils"
 	authservice "github.com/incheat/go-playground/services/auth/internal/service/auth"

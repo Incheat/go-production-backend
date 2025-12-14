@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	globalchimiddleware "github.com/incheat/go-playground/internal/middleware/chi"
-	servergen "github.com/incheat/go-playground/services/auth/internal/api/gen/oapi/public/server"
+	servergen "github.com/incheat/go-playground/services/auth/internal/api/oapi/gen/public/server"
 	"github.com/incheat/go-playground/services/auth/internal/config"
 	usergateway "github.com/incheat/go-playground/services/auth/internal/gateway/user/http"
 	authhandler "github.com/incheat/go-playground/services/auth/internal/handler/http"

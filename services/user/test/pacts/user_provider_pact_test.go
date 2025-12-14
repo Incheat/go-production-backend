@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	servergen "github.com/incheat/go-playground/services/user/internal/api/gen/oapi/private/server"
+	servergen "github.com/incheat/go-playground/services/user/internal/api/oapi/gen/private/server"
 	userhandler "github.com/incheat/go-playground/services/user/internal/handler/http"
 	userservice "github.com/incheat/go-playground/services/user/internal/service/user"
 	"github.com/incheat/go-playground/services/user/pkg/model"

@@ -35,7 +35,8 @@ go.work.sum
 .vscode/
 
 # oapi-codegen generated code
-services/*/internal/api/gen/
+api/*/oapi/gen/
+services/*/internal/api/*/gen/
 services/*/internal/db/gen/
 *_gen.go
 *generated.go
