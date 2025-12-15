@@ -1,5 +1,5 @@
-// Package config defines the configuration for the auth service.
-package config
+// Package koanfconfig defines the configuration for the auth service.
+package koanfconfig
 
 // EnvName is the name of the environment.
 type EnvName string

@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	globalchimiddleware "github.com/incheat/go-playground/internal/middleware/chi"
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/oapi/gen/public/server"
-	"github.com/incheat/go-playground/services/auth/internal/config"
+	envconfig "github.com/incheat/go-playground/services/auth/internal/config/env"
 	usergateway "github.com/incheat/go-playground/services/auth/internal/gateway/user/http"
 	authhandler "github.com/incheat/go-playground/services/auth/internal/handler/http"
 	chimiddleware "github.com/incheat/go-playground/services/auth/internal/middleware/chi"
@@ -25,11 +25,15 @@ import (
 
 func main() {
 
-	cfg := config.MustLoad()
+	cfg, err := envconfig.Load()
+	if err != nil {
+		log.Fatalf("Error loading config: %v", err)
+	}
+
 	logger := initLogger(cfg.Env)
 
 	logger.Info("Starting auth service", zap.String("env", string(cfg.Env)))
-	logger.Info("Server port", zap.Int("port", cfg.Server.Port))
+	logger.Info("Http server port", zap.Int("port", int(cfg.Server.PublicPort)))
 
 	// Get OpenAPI definition from embedded spec
 	openAPISpec, err := servergen.GetSwagger()
@@ -39,7 +43,7 @@ func main() {
 
 	// Initialize Redis client
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr,
+		Addr:     cfg.Redis.Host,
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
@@ -49,7 +53,7 @@ func main() {
 		panic(fmt.Errorf("failed to connect to Redis: %w", err))
 	}
 
-	logger.Info("Connected to Redis", zap.String("addr", cfg.Redis.Addr))
+	logger.Info("Connected to Redis", zap.String("addr", cfg.Redis.Host))
 	defer func() {
 		if err := redisClient.Close(); err != nil {
 			logger.Warn("Failed to close Redis client", zap.Error(err))
@@ -61,10 +65,10 @@ func main() {
 	router.Use(nethttpmiddleware.OapiRequestValidatorWithOptions(
 		openAPISpec,
 		globalchimiddleware.NewValidatorOptions(globalchimiddleware.ValidatorConfig{
-			ProdMode: cfg.Env == config.EnvProd,
+			ProdMode: cfg.Env == envconfig.EnvProd,
 		}),
 	))
-	router.Use(globalchimiddleware.PathBasedCORS(convertCORSRules(cfg)))
+	router.Use(chimiddleware.PathBasedCORS(convertCORSRules(&cfg.CORS.Internal)))
 	router.Use(chimiddleware.RequestID())
 	router.Use(chimiddleware.HTTPRequest())
 	router.Use(chimiddleware.ZapLogger(logger))
@@ -80,7 +84,7 @@ func main() {
 		cfg.Refresh.EndPoint,
 	)
 
-	userGateway, err := usergateway.NewUserGateway(cfg.UserService.BaseURL)
+	userGateway, err := usergateway.NewUserGateway(fmt.Sprintf("http://localhost:%d", cfg.UserGateway.InternalPort))
 	if err != nil {
 		log.Fatalf("Error creating user gateway: %v", err)
 	}
@@ -93,7 +97,7 @@ func main() {
 	var g errgroup.Group
 
 	g.Go(func() error {
-		return http.ListenAndServe(fmt.Sprintf(":%d", cfg.Server.Port), apiHandler)
+		return http.ListenAndServe(fmt.Sprintf(":%d", int(cfg.Server.PublicPort)), apiHandler)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -102,22 +106,21 @@ func main() {
 
 }
 
-func initLogger(env config.EnvName) *zap.Logger {
+func initLogger(env envconfig.EnvName) *zap.Logger {
 	switch env {
-	case config.EnvDev, config.EnvStaging:
+	case envconfig.EnvDev, envconfig.EnvStaging:
 		return zap.Must(zap.NewDevelopment())
 	default:
 		return zap.Must(zap.NewProduction())
 	}
 }
 
-func convertCORSRules(cfg *config.Config) []globalchimiddleware.CORSRule {
-	corsRules := make([]globalchimiddleware.CORSRule, len(cfg.CORS.Rules))
-	for i, rule := range cfg.CORS.Rules {
-		corsRules[i] = globalchimiddleware.CORSRule{
-			Path:           rule.Path,
-			AllowedOrigins: rule.AllowedOrigins,
-		}
+func convertCORSRules(corsRule *envconfig.CORSRule) []chimiddleware.CORSRule {
+	path := "*"
+	return []chimiddleware.CORSRule{
+		{
+			Path:           path,
+			AllowedOrigins: corsRule.AllowedOrigins,
+		},
 	}
-	return corsRules
 }

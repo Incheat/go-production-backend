@@ -243,19 +243,36 @@ migrate-up-all:
 		fi; \
 	done
 
+# ----------------------------------------
+# Build image and load into kind cluster
+# ----------------------------------------
+ENV ?= dev
+
+build-all:
+	@echo "Building image for all services"
+	@for svc in $(SERVICES); do \
+		$(MAKE) build-local SERVICE=$$svc ENV=$(ENV); \
+	done
+
+build-local:
+	@echo "Building image for $(SERVICE)"
+	docker build -t $(SERVICE):$(ENV) ./services/$(SERVICE)
+	kind load docker-image $(SERVICE):$(ENV)
 
 # ----------------------------------------
-# Run the auth service with different environments
+# Run microservices locally
 # ----------------------------------------
-# make run-dev SERVICE=auth
-run-dev:
+
+# make run-local SERVICE=auth
+run-all-local:
+	@echo "Running all services in dev mode"
+	@set -a; . ./.env.local; set +a; \
+	for svc in $(SERVICES); do \
+		echo "==> $$svc"; \
+		go run ./services/$$svc/cmd/main.go; \
+	done
+
+run-local:
 	@echo "$(SERVICE) service running in dev mode"
-	cd services/${SERVICE} && APP_ENV=dev go run ./cmd/main.go
-
-run-stage:
-	@echo "$(SERVICE) service running in stage mode"
-	cd services/${SERVICE} && APP_ENV=stage go run ./cmd/main.go
-
-run-prod:
-	@echo "$(SERVICE) service running in prod mode"
-	cd services/${SERVICE} && APP_ENV=prod go run ./cmd/main.go
+	set -a; . .env.local; set +a; \
+	go run ./services/$(SERVICE)/cmd/main.go
