@@ -8,15 +8,16 @@ import (
 	"os"
 
 	"github.com/gin-gonic/gin"
+
 	servergen "github.com/incheat/go-playground/services/helloworld/internal/api/oapi/gen/public/server"
-	"github.com/incheat/go-playground/services/helloworld/internal/config"
+	koanfconfig "github.com/incheat/go-playground/services/helloworld/internal/config/koanf"
 	"github.com/incheat/go-playground/services/helloworld/internal/handler"
 	middleware "github.com/incheat/go-playground/services/helloworld/internal/middleware/gin"
 	ginmiddleware "github.com/oapi-codegen/gin-middleware"
 )
 
 func main() {
-	cfg := config.MustLoad()
+	cfg := koanfconfig.MustLoad()
 	env := os.Getenv("APP_ENV")
 
 	fmt.Printf("ENV: %s\n", env)
@@ -53,7 +54,7 @@ func main() {
 
 }
 
-func convertCORSRules(cfg *config.Config) []middleware.CORSRule {
+func convertCORSRules(cfg *koanfconfig.Config) []middleware.CORSRule {
 	corsRules := make([]middleware.CORSRule, len(cfg.CORS.Rules))
 	for i, rule := range cfg.CORS.Rules {
 		corsRules[i] = middleware.CORSRule{

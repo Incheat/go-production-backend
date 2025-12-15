@@ -1,5 +1,5 @@
-// Package config defines the configuration for the helloworld service.
-package config
+// Package koanfconfig defines the configuration for the helloworld service.
+package koanfconfig
 
 // Config is the configuration for the application.
 type Config struct {
