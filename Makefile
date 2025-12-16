@@ -245,19 +245,35 @@ migrate-up-all:
 
 # ----------------------------------------
 # Build image and load into kind cluster
-# ----------------------------------------
+# 
+# ⚠️ IMPORTANT
+# This build is ARM64 ONLY.
+# - Target platform is fixed to: linux/arm64
+# - Intended for Apple Silicon / ARM-based nodes
+# - DO NOT use this image on amd64 / x86_64 hosts
+# - kind load requires image architecture to match the node
+#
+# If you need multi-arch or amd64 support in the future,
+# this Makefile must be updated to use buildx multi-platform build.
+#
+# --------------------------------------------
 ENV ?= dev
+KIND_NAME ?= dev
 
 build-all:
-	@echo "Building image for all services"
+	@echo "Building image for all services (ARM64 ONLY)"
 	@for svc in $(SERVICES); do \
 		$(MAKE) build-local SERVICE=$$svc ENV=$(ENV); \
 	done
 
 build-local:
-	@echo "Building image for $(SERVICE)"
-	docker build -t $(SERVICE):$(ENV) ./services/$(SERVICE)
-	kind load docker-image $(SERVICE):$(ENV)
+	@echo "Building image for $(SERVICE) (linux/arm64 ONLY)"
+	docker buildx build -f services/${SERVICE}/Dockerfile \
+		--build-arg SERVICE=${SERVICE} \
+		--platform linux/arm64 \
+		-t ${SERVICE}:${ENV} \
+		--load .
+	kind load docker-image --name ${KIND_NAME} ${SERVICE}:${ENV}
 
 # ----------------------------------------
 # Run microservices locally
