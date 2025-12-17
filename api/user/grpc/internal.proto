@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package user.v1;
+
+option go_package = "/;userpb";
+
+service UserServiceInternal {
+  // Verifies user credentials.
+  // On failure, the server returns gRPC status code UNAUTHENTICATED.
+  rpc VerifyUserCredentials(VerifyUserCredentialsRequest)
+      returns (VerifyUserCredentialsResponse);
+}
+
+message VerifyUserCredentialsRequest {
+  // User email address.
+  string email = 1;
+
+  // User password (minimum length should be validated by the server).
+  string password = 2;
+}
+
+message VerifyUserCredentialsResponse {
+  // Unique user identifier.
+  string id = 1;
+
+  // User email address.
+  string email = 2;
+
+  // Current user status (e.g. ACTIVE, DISABLED).
+  string status = 3;
+}

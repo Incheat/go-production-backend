@@ -36,6 +36,7 @@ go.work.sum
 
 # oapi-codegen generated code
 api/*/oapi/gen/
+api/*/grpc/gen/
 services/*/internal/api/*/gen/
 services/*/internal/db/*/gen/
 *_gen.go

@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	servergen "github.com/incheat/go-playground/services/auth/internal/api/oapi/gen/public/server"
 	envconfig "github.com/incheat/go-playground/services/auth/internal/config/env"
-	usergateway "github.com/incheat/go-playground/services/auth/internal/gateway/user/http"
+	usergateway "github.com/incheat/go-playground/services/auth/internal/gateway/user/grpc"
 	authhandler "github.com/incheat/go-playground/services/auth/internal/handler/http"
 	chimiddleware "github.com/incheat/go-playground/services/auth/internal/middleware/chi"
 	redisrepo "github.com/incheat/go-playground/services/auth/internal/repository/redis"
@@ -83,7 +83,7 @@ func main() {
 		cfg.Refresh.EndPoint,
 	)
 
-	userGateway, err := usergateway.NewUserGateway(cfg.UserGateway.InternalAddress)
+	userGateway, err := usergateway.New(cfg.UserGateway.InternalAddress)
 	if err != nil {
 		log.Fatalf("Error creating user gateway: %v", err)
 	}

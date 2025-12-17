@@ -18,12 +18,12 @@ type UserGateway struct {
 	client *clientgen.ClientWithResponses
 }
 
-// NewUserGateway creates a new UserGateway.
-func NewUserGateway(baseURL string) (*UserGateway, error) {
+// New creates a new UserGateway.
+func New(addr string) (*UserGateway, error) {
 	httpClient := &http.Client{Timeout: 2 * time.Second}
 
 	c, err := clientgen.NewClientWithResponses(
-		baseURL,
+		addr,
 		clientgen.WithHTTPClient(httpClient),
 	)
 	if err != nil {

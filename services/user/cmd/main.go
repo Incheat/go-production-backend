@@ -5,19 +5,17 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net/http"
+	"net"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	servergen "github.com/incheat/go-playground/services/user/internal/api/oapi/gen/private/server"
+	userpb "github.com/incheat/go-playground/api/user/grpc/gen"
 	envconfig "github.com/incheat/go-playground/services/user/internal/config/env"
-	userhandler "github.com/incheat/go-playground/services/user/internal/handler/http"
-	chimiddleware "github.com/incheat/go-playground/services/user/internal/middleware/chi"
+	userhandler "github.com/incheat/go-playground/services/user/internal/handler/grpc"
 	userrepo "github.com/incheat/go-playground/services/user/internal/repository/mysql"
 	userservice "github.com/incheat/go-playground/services/user/internal/service/user"
-	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -29,26 +27,9 @@ func main() {
 	logger := initLogger(envconfig.EnvName(cfg.Env))
 
 	logger.Info("Starting user service", zap.String("env", string(cfg.Env)))
-	logger.Info("Http server internal port", zap.Int("port", int(cfg.Server.InternalPort)))
+	logger.Info("GRPC server internal port", zap.Int("port", int(cfg.Server.InternalPort)))
 
-	// Get OpenAPI definition from embedded spec
-	openAPISpec, err := servergen.GetSwagger()
-	if err != nil {
-		log.Fatalf("Error loading OpenAPI spec: %v", err)
-	}
-
-	// HTTP router
-	router := chi.NewRouter()
-	router.Use(nethttpmiddleware.OapiRequestValidatorWithOptions(
-		openAPISpec,
-		chimiddleware.NewValidatorOptions(chimiddleware.ValidatorConfig{
-			ProdMode: cfg.Env == envconfig.EnvProd,
-		}),
-	))
-	// router.Use(chimiddleware.PathBasedCORS(convertCORSRules(cfg)))
-	router.Use(chimiddleware.RequestID())
-	router.Use(chimiddleware.ZapLogger(logger))
-	router.Use(chimiddleware.ZapRecovery(logger))
+	grpcServer := grpc.NewServer()
 
 	// Initialize MySQL connection
 	dbDSN := fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", cfg.MySQL.User, cfg.MySQL.Password, cfg.MySQL.Host, cfg.MySQL.DBName)
@@ -80,13 +61,17 @@ func main() {
 	userService := userservice.New(userRepository)
 	userImpl := userhandler.New(userService)
 
-	strict := servergen.NewStrictHandler(userImpl, nil)
-	apiHandler := servergen.HandlerFromMux(strict, router)
+	userpb.RegisterUserServiceInternalServer(grpcServer, userImpl)
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.InternalPort))
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
 
 	var g errgroup.Group
 
 	g.Go(func() error {
-		return http.ListenAndServe(fmt.Sprintf(":%d", cfg.Server.InternalPort), apiHandler)
+		return grpcServer.Serve(lis)
 	})
 
 	if err := g.Wait(); err != nil {

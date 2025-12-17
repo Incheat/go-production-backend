@@ -124,6 +124,38 @@ generate-all:
 	done
 	@echo "All services updated.\n"
 
+
+# ----------------------------------------
+# Generate GRPC code for one service
+# ----------------------------------------
+.PHONY: protoc
+
+GRPC_GEN_DIR := api/$(SERVICE)/grpc/gen
+INTERNAL_PROTO := api/$(SERVICE)/grpc/internal.proto
+protoc:
+	@echo "=== Generating GRPC code for service: $(SERVICE) ==="
+	@if [ -f "$(INTERNAL_PROTO)" ]; then \
+		if [ ! -d "$(GRPC_GEN_DIR)" ]; then \
+			mkdir -p "$(GRPC_GEN_DIR)"; \
+		fi; \
+		protoc --go_out=./api/$(SERVICE)/grpc/gen --go-grpc_out=./api/$(SERVICE)/grpc/gen $(INTERNAL_PROTO); \
+		echo "✓ GRPC code generation completed for $(SERVICE)"; \
+	else \
+		echo "⚠ Skipping GRPC code for service: $(SERVICE) not found."; \
+	fi
+	@echo "\n"
+
+# ----------------------------------------
+# Generate GRPC code for ALL services
+# ----------------------------------------
+.PHONY: protoc-all
+
+protoc-all:
+	@echo "\nGenerating GRPC code for ALL services: $(SERVICES) \n"
+	@for svc in $(SERVICES); do \
+		$(MAKE) protoc SERVICE=$$svc; \
+	done
+
 # ----------------------------------------
 # Generate SQLC code for one service
 # ----------------------------------------
