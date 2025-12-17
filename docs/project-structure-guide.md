@@ -66,7 +66,7 @@ This guide describes a clean, scalable directory structure for Go applications�
 │             └── config.prod.yaml
 │── internal/            # Shared utilities (logger, middleware, helpers)
 │
-│── scripts/             # CI/CD scripts, build automation, deploy tooling
+│── deploy/             # CI/CD scripts, build automation, deploy tooling, helm
 │
 │── test/                # Integration, contract, and BDD test structure
 │    ├── pacts/           # Consumer/provider contract tests
