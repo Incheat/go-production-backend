@@ -266,6 +266,13 @@ build-all:
 		$(MAKE) build-local SERVICE=$$svc ENV=$(ENV); \
 	done
 
+build-all-kind:
+	@echo "Building image for all services (ARM64 ONLY) and loading into kind cluster"
+	@for svc in $(SERVICES); do \
+		$(MAKE) build-local SERVICE=$$svc ENV=$(ENV); \
+		kind load docker-image --name ${KIND_NAME} ${SERVICE}:${ENV}; \
+	done
+
 build-local:
 	@echo "Building image for $(SERVICE) (linux/arm64 ONLY)"
 	docker buildx build -f services/${SERVICE}/Dockerfile \
@@ -273,7 +280,6 @@ build-local:
 		--platform linux/arm64 \
 		-t ${SERVICE}:${ENV} \
 		--load .
-	kind load docker-image --name ${KIND_NAME} ${SERVICE}:${ENV}
 
 
 # ----------------------------------------
@@ -291,6 +297,19 @@ helm-install:
 	-n dev --create-namespace \
 	-f ./deploy/helm/monorepo/values.yaml \
 	-f ./deploy/helm/monorepo/values.dev.secrets.yaml
+
+# ----------------------------------------
+# docker compose
+# ----------------------------------------
+
+compose-up:
+	docker compose up -d
+
+compose-down:
+	docker compose down
+
+compose-reset:
+	docker compose down -v
 
 # ----------------------------------------
 # Run microservices locally

@@ -1,0 +1,44 @@
+services:
+  # redis:
+  #   image: redis:7-alpine
+  #   command: ["redis-server", "--requirepass", "${AUTH_REDIS_PASSWORD}", "--appendonly", "yes"]
+  #   ports:
+  #     - "6379:6379"
+
+  # mysql:
+  #   image: mysql:8.0
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+  #     MYSQL_DATABASE: ${MYSQL_DATABASE}
+  #     MYSQL_USER: ${MYSQL_USER}
+  #     MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+
+  user:
+    image: user:dev
+    env_file:
+      - .env.local
+    # Localhost:Container
+    # ports:
+    #   - "8082:8080"
+    #   - "19090:9090"
+    # depends_on:
+    #   - mysql
+
+  auth:
+    image: auth:dev
+    env_file:
+      - .env.local
+    # Localhost:Container
+    ports:
+      - "8081:8080"
+      # - "29090:9090"
+    depends_on:
+      # - redis
+      - user
+
+# volumes:
+#   mysql_data:
