@@ -35,19 +35,43 @@ jobs:
         env:
           PACT_LIB_DIR: /tmp/pact
         run: |
+          set -euo pipefail
           mkdir -p "$PACT_LIB_DIR"
           go install github.com/pact-foundation/pact-go/v2@latest
-          export PATH="$(go env GOPATH)/bin:$PATH"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
           pact-go install --libDir "$PACT_LIB_DIR"
 
-      - name: Generate API code for all services
-        run: make generate-all
+      - name: Install protoc (Protocol Buffers compiler)
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          protoc --version
+
+      - name: Install gRPC Go codegen tools
+        run: |
+          set -euo pipefail
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          protoc-gen-go --version || true
+          protoc-gen-go-grpc --version || true
 
       - name: Install sqlc
         run: |
           go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
           export PATH="$(go env GOPATH)/bin:$PATH"
           sqlc version
+
+      - name: Generate API code for all services
+        run: |
+          set -euo pipefail
+          make generate-all
+
+      - name: Generate gRPC code for all services
+        run: |
+          set -euo pipefail
+          make protoc-all
 
       - name: Generate SQLC code for all services
         run: |
