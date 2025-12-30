@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	authservice "github.com/incheat/go-playground/services/auth/internal/service/auth"
-	"github.com/incheat/go-playground/services/auth/pkg/model"
-	usermodel "github.com/incheat/go-playground/services/user/pkg/model"
+	authservice "github.com/incheat/go-production-backend/services/auth/internal/service/auth"
+	"github.com/incheat/go-production-backend/services/auth/pkg/model"
+	usermodel "github.com/incheat/go-production-backend/services/user/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

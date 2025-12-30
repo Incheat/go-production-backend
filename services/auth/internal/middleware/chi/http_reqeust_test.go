@@ -7,7 +7,7 @@ import (
 
 	"context"
 
-	chimiddlewareutils "github.com/incheat/go-playground/services/auth/internal/middleware/chi/utils"
+	chimiddlewareutils "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi/utils"
 )
 
 // Test that HTTPRequest middleware stores the *http.Request in the context

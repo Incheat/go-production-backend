@@ -5,8 +5,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/incheat/go-playground/services/auth/internal/repository"
-	"github.com/incheat/go-playground/services/auth/pkg/model"
+	"github.com/incheat/go-production-backend/services/auth/internal/repository"
+	"github.com/incheat/go-production-backend/services/auth/pkg/model"
 )
 
 // RefreshTokenRepository defines a memory refresh token repository.

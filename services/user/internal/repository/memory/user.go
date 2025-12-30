@@ -5,8 +5,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/incheat/go-playground/services/user/internal/repository"
-	"github.com/incheat/go-playground/services/user/pkg/model"
+	"github.com/incheat/go-production-backend/services/user/internal/repository"
+	"github.com/incheat/go-production-backend/services/user/pkg/model"
 )
 
 // UserRepository defines a memory user repository.

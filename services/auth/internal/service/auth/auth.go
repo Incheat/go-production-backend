@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/incheat/go-playground/services/auth/pkg/model"
-	usermodel "github.com/incheat/go-playground/services/user/pkg/model"
+	"github.com/incheat/go-production-backend/services/auth/pkg/model"
+	usermodel "github.com/incheat/go-production-backend/services/user/pkg/model"
 )
 
 // Service is the service for the auth API.

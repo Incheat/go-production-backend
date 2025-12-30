@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/incheat/go-playground/services/auth/internal/constant"
+	"github.com/incheat/go-production-backend/services/auth/internal/constant"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"

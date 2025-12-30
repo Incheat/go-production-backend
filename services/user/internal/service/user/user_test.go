@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	userservice "github.com/incheat/go-playground/services/user/internal/service/user"
-	"github.com/incheat/go-playground/services/user/pkg/model"
+	userservice "github.com/incheat/go-production-backend/services/user/internal/service/user"
+	"github.com/incheat/go-production-backend/services/user/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

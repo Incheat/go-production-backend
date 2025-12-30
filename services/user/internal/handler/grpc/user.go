@@ -4,8 +4,8 @@ package userhandler
 import (
 	"context"
 
-	userpb "github.com/incheat/go-playground/api/user/grpc/gen"
-	userservice "github.com/incheat/go-playground/services/user/internal/service/user"
+	userpb "github.com/incheat/go-production-backend/api/user/grpc/gen"
+	userservice "github.com/incheat/go-production-backend/services/user/internal/service/user"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

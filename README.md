@@ -1,5 +1,5 @@
 # go-production-backend
-[![codecov](https://codecov.io/gh/Incheat/go-playground/branch/main/graph/badge.svg)](https://codecov.io/gh/Incheat/go-playground)
+[![codecov](https://codecov.io/gh/Incheat/go-production-backend/branch/main/graph/badge.svg)](https://codecov.io/gh/Incheat/go-production-backend)
 
 A **production-oriented Go backend system** designed to demonstrate real-world engineering practices, architectural decision-making, and operational excellence.
 

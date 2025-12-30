@@ -7,10 +7,10 @@ import (
 	"net"
 	"net/http"
 
-	servergen "github.com/incheat/go-playground/services/auth/internal/api/oapi/gen/public/server"
-	"github.com/incheat/go-playground/services/auth/internal/constant"
-	chimiddlewareutils "github.com/incheat/go-playground/services/auth/internal/middleware/chi/utils"
-	authservice "github.com/incheat/go-playground/services/auth/internal/service/auth"
+	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
+	"github.com/incheat/go-production-backend/services/auth/internal/constant"
+	chimiddlewareutils "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi/utils"
+	authservice "github.com/incheat/go-production-backend/services/auth/internal/service/auth"
 )
 
 // _ is a placeholder to ensure that Server implements the StrictServerInterface interface.

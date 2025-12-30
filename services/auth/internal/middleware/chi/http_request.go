@@ -4,7 +4,7 @@ package chimiddleware
 import (
 	"net/http"
 
-	chimiddlewareutils "github.com/incheat/go-playground/services/auth/internal/middleware/chi/utils"
+	chimiddlewareutils "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi/utils"
 )
 
 // HTTPRequest is a middleware that stores the http request in the context.

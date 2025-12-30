@@ -4,8 +4,8 @@ package userhandler
 import (
 	"context"
 
-	servergen "github.com/incheat/go-playground/services/user/internal/api/oapi/gen/private/server"
-	userservice "github.com/incheat/go-playground/services/user/internal/service/user"
+	servergen "github.com/incheat/go-production-backend/services/user/internal/api/oapi/gen/private/server"
+	userservice "github.com/incheat/go-production-backend/services/user/internal/service/user"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 

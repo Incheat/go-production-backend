@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5" // If you're on v3/v4, adjust import path.
-	"github.com/incheat/go-playground/services/auth/internal/token"
+	"github.com/incheat/go-production-backend/services/auth/internal/token"
 )
 
 // TestUnitCreateTokenAndParseID_RoundTrip checks the happy path: create a token and parse it back.

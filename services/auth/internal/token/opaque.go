@@ -6,7 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/incheat/go-playground/services/auth/pkg/model"
+	"github.com/incheat/go-production-backend/services/auth/pkg/model"
 )
 
 // OpaqueMaker is a Opaque maker.

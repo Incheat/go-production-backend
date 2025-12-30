@@ -9,10 +9,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	servergen "github.com/incheat/go-playground/services/helloworld/internal/api/oapi/gen/public/server"
-	koanfconfig "github.com/incheat/go-playground/services/helloworld/internal/config/koanf"
-	"github.com/incheat/go-playground/services/helloworld/internal/handler"
-	middleware "github.com/incheat/go-playground/services/helloworld/internal/middleware/gin"
+	servergen "github.com/incheat/go-production-backend/services/helloworld/internal/api/oapi/gen/public/server"
+	koanfconfig "github.com/incheat/go-production-backend/services/helloworld/internal/config/koanf"
+	"github.com/incheat/go-production-backend/services/helloworld/internal/handler"
+	middleware "github.com/incheat/go-production-backend/services/helloworld/internal/middleware/gin"
 	ginmiddleware "github.com/oapi-codegen/gin-middleware"
 )
 

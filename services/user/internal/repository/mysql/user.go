@@ -8,9 +8,9 @@ import (
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
-	db "github.com/incheat/go-playground/services/user/internal/db/mysql/gen"
-	"github.com/incheat/go-playground/services/user/internal/repository"
-	"github.com/incheat/go-playground/services/user/pkg/model"
+	db "github.com/incheat/go-production-backend/services/user/internal/db/mysql/gen"
+	"github.com/incheat/go-production-backend/services/user/internal/repository"
+	"github.com/incheat/go-production-backend/services/user/pkg/model"
 )
 
 // UserRepository defines a memory user repository.

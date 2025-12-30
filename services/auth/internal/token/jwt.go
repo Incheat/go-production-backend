@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/incheat/go-playground/services/auth/pkg/model"
+	"github.com/incheat/go-production-backend/services/auth/pkg/model"
 )
 
 // JWTMaker is a JWT maker.

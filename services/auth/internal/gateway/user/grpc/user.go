@@ -5,8 +5,8 @@ import (
 	"context"
 	"time"
 
-	userpb "github.com/incheat/go-playground/api/user/grpc/gen"
-	usermodel "github.com/incheat/go-playground/services/user/pkg/model"
+	userpb "github.com/incheat/go-production-backend/api/user/grpc/gen"
+	usermodel "github.com/incheat/go-production-backend/services/user/pkg/model"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

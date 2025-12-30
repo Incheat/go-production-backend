@@ -1,4 +1,4 @@
-module github.com/incheat/go-playground
+module github.com/incheat/go-production-backend
 
 go 1.24.5
 

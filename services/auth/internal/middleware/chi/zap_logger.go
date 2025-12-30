@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	chimiddlewareutils "github.com/incheat/go-playground/services/auth/internal/middleware/chi/utils"
+	chimiddlewareutils "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi/utils"
 	"go.uber.org/zap"
 )
 

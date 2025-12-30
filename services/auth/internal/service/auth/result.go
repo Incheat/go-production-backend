@@ -1,7 +1,7 @@
 // Package authservice defines the result for the auth API.
 package authservice
 
-import "github.com/incheat/go-playground/services/auth/pkg/model"
+import "github.com/incheat/go-production-backend/services/auth/pkg/model"
 
 // LoginResult is the result for the login API.
 type LoginResult struct {

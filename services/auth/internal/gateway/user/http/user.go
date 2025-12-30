@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	clientgen "github.com/incheat/go-playground/api/user/oapi/gen/private"
+	clientgen "github.com/incheat/go-production-backend/api/user/oapi/gen/private"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	usermodel "github.com/incheat/go-playground/services/user/pkg/model"
+	usermodel "github.com/incheat/go-production-backend/services/user/pkg/model"
 )
 
 // UserGateway is the gateway for the user service.

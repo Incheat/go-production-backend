@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/incheat/go-playground/services/user/internal/constant"
+	"github.com/incheat/go-production-backend/services/user/internal/constant"
 )
 
 // TestUnitLoad_InvalidEnv verifies that Load returns an error

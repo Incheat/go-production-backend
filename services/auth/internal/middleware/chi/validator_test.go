@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	middleware "github.com/incheat/go-playground/services/auth/internal/middleware/chi"
+	middleware "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi"
 )
 
 func TestUnitNewValidatorOptions_ProdMode(t *testing.T) {
