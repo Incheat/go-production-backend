@@ -9,6 +9,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      security-events: write   # let SARIF be uploaded to GitHub Code Scanning
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -84,7 +88,7 @@ jobs:
 
       - name: Run Go tests with coverage (excluding Pact tests)
         run: |
-          # List all Go packages, exclude Pact test packages, then run go test on the rest
+          set -euo pipefail
           PKGS=$(go list ./... | grep -v '/test/pacts')
           go test $PKGS -v -coverprofile=coverage.txt
 
@@ -94,11 +98,47 @@ jobs:
           LD_LIBRARY_PATH: /tmp/pact
           CGO_LDFLAGS: "-L/tmp/pact"
         run: |
+          set -euo pipefail
           export PATH="$(go env GOPATH)/bin:$PATH"
           go test ./test/pacts/... -v
+
+      # -------------------------
+      # Security scans (AFTER lint/tests/pact)
+      # -------------------------
+      - name: Install govulncheck and gosec
+        run: |
+          set -euo pipefail
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Run gosec (SARIF)
+        run: |
+          set -euo pipefail
+          gosec -fmt=sarif -out=gosec.sarif ./...
+
+      - name: Upload gosec SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gosec.sarif
+
+      - name: Run govulncheck (JSON)
+        run: |
+          set -euo pipefail
+          govulncheck -json ./... > govulncheck.json
+
+      - name: Upload security scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            gosec.sarif
+            govulncheck.json
+      # -------------------------
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
-            token: ${{ secrets.CODECOV_TOKEN }}
-            files: coverage.txt
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.txt
