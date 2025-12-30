@@ -2,8 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
+  push:
+    branches: [ main ]
 
 jobs:
   build-and-test:
@@ -11,7 +12,7 @@ jobs:
 
     permissions:
       contents: read
-      security-events: write   # let SARIF be uploaded to GitHub Code Scanning
+      security-events: write   # needed for SARIF upload on main push
 
     steps:
       - name: Checkout code
@@ -117,7 +118,9 @@ jobs:
           set -euo pipefail
           gosec -no-fail -fmt=sarif -out=gosec.sarif ./...
 
+      # ✅ Only upload SARIF on main push
       - name: Upload gosec SARIF to GitHub Code Scanning
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: gosec.sarif
