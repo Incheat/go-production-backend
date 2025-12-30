@@ -1,5 +1,7 @@
 # go-production-backend
 [![codecov](https://codecov.io/gh/Incheat/go-production-backend/branch/main/graph/badge.svg)](https://codecov.io/gh/Incheat/go-production-backend)
+![gosec](https://img.shields.io/badge/gosec-enabled-brightgreen)
+![govulncheck](https://img.shields.io/badge/govulncheck-enabled-blue)
 
 A **production-oriented Go backend system** designed to demonstrate real-world engineering practices, architectural decision-making, and operational excellence.
 
