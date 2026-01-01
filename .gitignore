@@ -41,3 +41,6 @@ services/*/internal/api/*/gen/
 services/*/internal/db/*/gen/
 *_gen.go
 *generated.go
+
+# PKI
+infra/security/mtls/pki/secrets/*
