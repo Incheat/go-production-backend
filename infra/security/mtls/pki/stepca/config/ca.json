@@ -18,6 +18,11 @@
 		"badgerFileLoadingMode": ""
 	},
 	"authority": {
+		"claims": {
+			"minTLSCertDuration": "5m",
+			"maxTLSCertDuration": "2h",
+			"defaultTLSCertDuration": "1h"
+		},
 		"provisioners": [
 			{
 				"type": "JWK",
