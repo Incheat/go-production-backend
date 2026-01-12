@@ -11,10 +11,11 @@ services:
       - "9000:9000"
     command: ["step-ca", "/home/step/config/ca.json", "--password-file", "/run/secrets/ca.password"]
     healthcheck:
-      test: ["CMD", "wget", "--ca-certificate=/home/step/certs/root_ca.crt", "-qO-", "https://localhost:9000/health"]
+      test: ["CMD-SHELL", "wget -qO- --no-check-certificate https://127.0.0.1:9000/health >/dev/null"]
       interval: 5s
       timeout: 3s
       retries: 20
+      start_period: 10s
 
   # =========================
   # AUTH: app + envoy + step-sds
@@ -25,12 +26,37 @@ services:
       - .env.local
     network_mode: "service:auth-envoy"
     depends_on:
-      - auth-envoy
-      - user-envoy
+      auth-envoy:
+        condition: service_healthy
+      user-envoy:
+        condition: service_healthy
     # The app listens ONLY on:
     #   127.0.0.1:8080 (HTTP)
     #   127.0.0.1:9090 (gRPC)
     # No ports exposed
+
+  auth-envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
+    volumes:
+      - ./infra/envoy/auth-envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./infra/security/mtls/pki/auth-sds/run:/var/run/step-sds:ro
+      - ./infra/security/tls/localhost:/etc/envoy/certs:ro
+    depends_on:
+      auth-sds:
+        condition: service_healthy
+    ports:
+      # HTTP: auth-envoy:18080 -> auth:8080
+      - "8081:18080"
+      # gRPC: auth-envoy:19080 -> auth:9090
+      # Envoy admin
+      - "19001:19000"   # http://localhost:19001/stats/prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "bash -lc ': </dev/tcp/127.0.0.1/19000'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
 
   auth-sds:
     image: smallstep/step-sds:latest
@@ -38,7 +64,9 @@ services:
       - ./infra/security/mtls/pki/auth-sds:/home/step
       - ./infra/security/mtls/pki/secrets:/run/secrets:ro
       - ./infra/security/mtls/pki/auth-sds/run:/var/run/step-sds
-    depends_on: [ step-ca ]
+    depends_on:
+      step-ca:
+        condition: service_healthy
     command:
       - /bin/sh
       - -c
@@ -49,21 +77,13 @@ services:
         exec step-sds run /home/step/config/sds.json
         --password-file /run/secrets/auth.sds.password
         --provisioner-password-file /run/secrets/ca.password
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /var/run/step-sds/sds.sock && pgrep -f 'step-sds' >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
 
-  auth-envoy:
-    image: envoyproxy/envoy:v1.31-latest
-    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
-    volumes:
-      - ./infra/envoy/auth-envoy.yaml:/etc/envoy/envoy.yaml:ro
-      - ./infra/security/mtls/pki/auth-sds/run:/var/run/step-sds:ro
-      - ./infra/security/tls/localhost:/etc/envoy/certs:ro
-    depends_on: [ auth-sds ]
-    ports:
-      # HTTP: auth-envoy:18080 -> auth:8080
-      - "8081:18080"
-      # gRPC: auth-envoy:19080 -> auth:9090
-      # Envoy admin
-      - "19001:19000"   # http://localhost:19001/stats/prometheus
 
   # =========================
   # USER: app + envoy + step-sds
@@ -74,29 +94,12 @@ services:
       - .env.local
     network_mode: "service:user-envoy"
     depends_on:
-      - user-envoy
+      user-envoy:
+        condition: service_healthy
     # The app listens ONLY on:
     #   127.0.0.1:8080 (HTTP)
     #   127.0.0.1:9090 (gRPC)
     # No ports exposed
-
-  user-sds:
-    image: smallstep/step-sds:latest
-    volumes:
-      - ./infra/security/mtls/pki/user-sds:/home/step
-      - ./infra/security/mtls/pki/secrets:/run/secrets:ro
-      - ./infra/security/mtls/pki/user-sds/run:/var/run/step-sds
-    depends_on: [ step-ca ]
-    command:
-      - /bin/sh
-      - -c
-      - >
-        set -eux;
-        rm -f /var/run/step-sds/sds.sock;
-        ls -la /var/run/step-sds;
-        exec step-sds run /home/step/config/sds.json
-        --password-file /run/secrets/user.sds.password
-        --provisioner-password-file /run/secrets/ca.password
 
   user-envoy:
     image: envoyproxy/envoy:v1.31-latest
@@ -110,5 +113,37 @@ services:
       # Envoy admin (metrics, config dump)
       - "19002:19000"   # http://localhost:19002/stats/prometheus
     depends_on:
-      - user-sds
-      - auth-envoy
+      user-sds:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -lc ': </dev/tcp/127.0.0.1/19000'"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  user-sds:
+    image: smallstep/step-sds:latest
+    volumes:
+      - ./infra/security/mtls/pki/user-sds:/home/step
+      - ./infra/security/mtls/pki/secrets:/run/secrets:ro
+      - ./infra/security/mtls/pki/user-sds/run:/var/run/step-sds
+    depends_on:
+      step-ca:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -c
+      - >
+        set -eux;
+        rm -f /var/run/step-sds/sds.sock;
+        ls -la /var/run/step-sds;
+        exec step-sds run /home/step/config/sds.json
+        --password-file /run/secrets/user.sds.password
+        --provisioner-password-file /run/secrets/ca.password
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /var/run/step-sds/sds.sock && pgrep -f 'step-sds' >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
