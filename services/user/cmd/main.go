@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -18,6 +19,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func main() {
@@ -37,6 +40,16 @@ func main() {
 		grpc.ChainUnaryInterceptor(interceptors...),
 	)
 
+	// ----------------------------
+	// gRPC Health Service
+	// ----------------------------
+	healthServer := health.NewServer()
+
+	// Initially not serving, wait for MySQL to be ready
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+
 	// Initialize MySQL connection
 	dbDSN := fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", cfg.MySQL.User, cfg.MySQL.Password, cfg.MySQL.Host, cfg.MySQL.DBName)
 	logger.Info("Initializing MySQL connection", zap.String("dsn", dbDSN))
@@ -47,19 +60,29 @@ func main() {
 	dbConn.SetMaxOpenConns(cfg.MySQL.MaxOpenConns)
 	dbConn.SetMaxIdleConns(cfg.MySQL.MaxIdleConns)
 	dbConn.SetConnMaxLifetime(time.Duration(cfg.MySQL.ConnMaxLifetime) * time.Second)
-	if err != nil {
-		log.Fatalf("Error opening MySQL connection: %v", err)
+	{
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		if err := dbConn.PingContext(ctx); err != nil {
+			healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+			log.Fatalf("Error pinging MySQL: %v", err)
+		}
 	}
+
+	// ✅ MySQL OK -> readiness OK
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+
 	defer func() {
+		// Before closing, declare NOT_SERVING to stop traffic from Envoy/K8s
+		healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
+
+		grpcServer.GracefulStop()
+
 		if err := dbConn.Close(); err != nil {
 			logger.Warn("Failed to close MySQL connection", zap.Error(err))
 		}
 	}()
-
-	// Check if the connection is working
-	if err := dbConn.Ping(); err != nil {
-		log.Fatalf("Error pinging MySQL: %v", err)
-	}
 
 	// user components
 	userRepository := userrepo.NewUserRepository(dbConn)

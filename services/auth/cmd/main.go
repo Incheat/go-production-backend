@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
@@ -84,6 +85,26 @@ func main() {
 
 	// ---- HTTP Routers ----
 	rootRouter := chi.NewRouter()
+
+	// ✅ Health check endpoint
+	rootRouter.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
+		defer cancel()
+
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			if _, err := w.Write([]byte("redis not ready")); err != nil {
+				logger.Error("Failed to write health check response", zap.Error(err))
+			}
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+
+		if _, err := w.Write([]byte("ok")); err != nil {
+			logger.Error("Failed to write health check response", zap.Error(err))
+		}
+	})
 
 	// ✅ JWKS endpoint (NOT behind OpenAPI validator)
 	jwksPath := cfg.JWT.JWKSPath

@@ -67,6 +67,7 @@ static_resources:
                     - name: user_grpc
                       domains: ["*"]
                       routes:
+                            
                         - match: { prefix: "/" }
                           route:
                             cluster: user_app_grpc
@@ -88,6 +89,53 @@ static_resources:
                       filter_enforced:
                         default_value: { numerator: 100, denominator: HUNDRED }
 
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+    # =========================
+    # (B) INTERNAL HEALTH (localhost only, plain HTTP)
+    # =========================
+    - name: user_internal_health
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 19081 }
+      per_connection_buffer_limit_bytes: 32768
+      filter_chains:
+          filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: user_internal_health
+                codec_type: AUTO
+
+                internal_address_config:
+                  unix_sockets: true
+                  cidr_ranges:
+                    - address_prefix: "10.0.0.0"
+                      prefix_len: 8
+                    - address_prefix: "172.16.0.0"
+                      prefix_len: 12
+                    - address_prefix: "192.168.0.0"
+                      prefix_len: 16
+
+                http2_protocol_options: {}
+
+                route_config:
+                  name: user_internal_health_routes
+                  virtual_hosts:
+                    - name: user_internal_health
+                      domains: ["*"]
+                      routes:
+                        - match: { path: "/grpc.health.v1.Health/Check" }
+                          route:
+                            cluster: user_app_grpc
+                            timeout: 1s
+
+                        - match: { path: "/grpc.health.v1.Health/Watch" }
+                          route:
+                            cluster: user_app_grpc
+                            timeout: 1s
+
+                http_filters:
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

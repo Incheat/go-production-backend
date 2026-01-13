@@ -196,7 +196,39 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
     # =========================
-    # (B) gRPC INBOUND (to auth app :9090)
+    # (B) INTERNAL HEALTH (localhost only, plain HTTP)
+    # =========================
+    - name: auth_internal_health
+      address:
+        socket_address: { address: 0.0.0.0, port_value: 18081 }
+      per_connection_buffer_limit_bytes: 16384
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: auth_internal_health
+                codec_type: AUTO
+                generate_request_id: false
+
+                route_config:
+                  name: auth_internal_health_routes
+                  virtual_hosts:
+                    - name: auth_internal_health
+                      domains: ["*"]
+                      routes:
+                        - match: { path: "/healthz" }
+                          route:
+                            cluster: auth_app_http
+                            timeout: 1s
+
+                http_filters:
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+    # =========================
+    # (C) gRPC INBOUND (to auth app :9090)
     # =========================
     - name: auth_grpc_inbound
       address:
