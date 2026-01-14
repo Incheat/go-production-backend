@@ -121,8 +121,7 @@ func main() {
 			ProdMode: cfg.Env == envconfig.EnvProd,
 		}),
 	))
-	// apiRouter.Use(chimiddleware.RequestID())
-	apiRouter.Use(chimiddleware.HTTPRequest())
+	apiRouter.Use(chimiddleware.RequestMeta())
 	apiRouter.Use(chimiddleware.ZapLogger(logger))
 	apiRouter.Use(chimiddleware.ZapRecovery(logger))
 
