@@ -19,7 +19,6 @@ const (
 type Config struct {
 	Env         EnvName
 	Server      Server
-	CORS        CORS
 	Redis       Redis
 	JWT         JWT
 	Refresh     Refresh
@@ -38,18 +37,6 @@ type UserGateway struct {
 
 // Port is the port for the server.
 type Port int
-
-// CORS is the configuration for the CORS.
-type CORS struct {
-	Internal CORSRule
-	Public   CORSRule
-}
-
-// CORSRule is the configuration for the CORS rule.
-type CORSRule struct {
-	AllowedOrigins   []string
-	AllowCredentials bool
-}
 
 // Redis is the configuration for the Redis.
 type Redis struct {

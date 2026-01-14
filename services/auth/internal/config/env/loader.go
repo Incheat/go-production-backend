@@ -21,18 +21,6 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	authCorsPublicAllowedOrigins := parseOrigins(getString("AUTH_CORS_PUBLIC_ALLOWED_ORIGINS"))
-	authCorsPublicAllowCredentials, err := getBoolRequired("AUTH_CORS_PUBLIC_ALLOW_CREDENTIALS")
-	if err != nil {
-		return nil, err
-	}
-
-	authCorsInternalAllowedOrigins := parseOrigins(getString("AUTH_CORS_INTERNAL_ALLOWED_ORIGINS"))
-	authCorsInternalAllowCredentials, err := getBoolRequired("AUTH_CORS_INTERNAL_ALLOW_CREDENTIALS")
-	if err != nil {
-		return nil, err
-	}
-
 	authRedisHost := getString("AUTH_REDIS_HOST")
 	authRedisPassword := getString("AUTH_REDIS_PASSWORD")
 	authRedisDB, err := getIntRequired("AUTH_REDIS_DB")
@@ -70,16 +58,6 @@ func Load() (*Config, error) {
 		},
 		UserGateway: UserGateway{
 			InternalAddress: authUserGatewayInternalAddress,
-		},
-		CORS: CORS{
-			Internal: CORSRule{
-				AllowedOrigins:   authCorsInternalAllowedOrigins,
-				AllowCredentials: authCorsInternalAllowCredentials,
-			},
-			Public: CORSRule{
-				AllowedOrigins:   authCorsPublicAllowedOrigins,
-				AllowCredentials: authCorsPublicAllowCredentials,
-			},
 		},
 		Redis: Redis{
 			Host:     authRedisHost,
@@ -123,43 +101,6 @@ func getIntRequired(name string) (int, error) {
 		return 0, fmt.Errorf("%s: %w", name, err)
 	}
 	return v, nil
-}
-
-func getBoolRequired(name string) (bool, error) {
-	raw := getString(name)
-	if raw == "" {
-		return false, fmt.Errorf("%s: %w", name, errMissingEnv)
-	}
-	v, err := strconv.ParseBool(raw)
-	if err != nil {
-		return false, fmt.Errorf("%s: %w", name, err)
-	}
-	return v, nil
-}
-
-// parseOrigins supports:
-// - "" => nil
-// - "*" => []string{"*"}  (so CORS layer can treat it as allow-all)
-// - "a,b,c" => []string{"a","b","c"} (trimmed, empties removed)
-func parseOrigins(env string) []string {
-	env = strings.TrimSpace(env)
-	if env == "" {
-		return nil
-	}
-	if env == "*" {
-		return []string{"*"}
-	}
-
-	parts := strings.Split(env, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		out = append(out, p)
-	}
-	return out
 }
 
 func validate(cfg *Config) error {
