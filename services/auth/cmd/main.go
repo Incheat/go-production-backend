@@ -121,9 +121,7 @@ func main() {
 			ProdMode: cfg.Env == envconfig.EnvProd,
 		}),
 	))
-	// apiRouter.Use(chimiddleware.PathBasedCORS(convertCORSRules(&cfg.CORS.Internal)))
-	// apiRouter.Use(chimiddleware.RequestID())
-	apiRouter.Use(chimiddleware.HTTPRequest())
+	apiRouter.Use(chimiddleware.RequestMeta())
 	apiRouter.Use(chimiddleware.ZapLogger(logger))
 	apiRouter.Use(chimiddleware.ZapRecovery(logger))
 
@@ -151,13 +149,3 @@ func initLogger(env envconfig.EnvName) *zap.Logger {
 		return zap.Must(zap.NewProduction())
 	}
 }
-
-// func convertCORSRules(corsRule *envconfig.CORSRule) []chimiddleware.CORSRule {
-// 	path := "*"
-// 	return []chimiddleware.CORSRule{
-// 		{
-// 			Path:           path,
-// 			AllowedOrigins: corsRule.AllowedOrigins,
-// 		},
-// 	}
-// }

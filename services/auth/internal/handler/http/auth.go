@@ -3,9 +3,8 @@ package authhandler
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net"
-	"net/http"
 
 	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
 	"github.com/incheat/go-production-backend/services/auth/internal/constant"
@@ -31,9 +30,14 @@ func (h *Server) Login(ctx context.Context, request servergen.LoginRequestObject
 	email := string(request.Body.Email)
 	password := request.Body.Password
 
-	httpRequest := chimiddlewareutils.GetHTTPRequest(ctx)
-	userAgent := getUserAgentFromRequest(httpRequest)
-	ipAddress := getIPAddressFromRequest(httpRequest)
+	requestMeta, ok := chimiddlewareutils.GetRequestMeta(ctx)
+	if !ok {
+		return servergen.Login500JSONResponse{
+			Error: "request metadata not found",
+		}, errors.New("request metadata not found")
+	}
+	userAgent := requestMeta.UserAgent
+	ipAddress := requestMeta.IPAddress
 
 	res, err := h.service.LoginWithEmailAndPassword(ctx, email, password, userAgent, ipAddress)
 	if err != nil {
@@ -54,35 +58,6 @@ func (h *Server) Login(ctx context.Context, request servergen.LoginRequestObject
 			SetCookie: setCookie,
 		},
 	}, nil
-}
-
-func getUserAgentFromRequest(httpRequest *http.Request) string {
-	if httpRequest == nil {
-		return ""
-	}
-	return httpRequest.Header.Get("User-Agent")
-}
-
-func getIPAddressFromRequest(httpRequest *http.Request) string {
-	if httpRequest == nil {
-		return ""
-	}
-	// Try real IP from common proxy headers
-	ipAddress := httpRequest.Header.Get("X-Forwarded-For")
-	if ipAddress == "" {
-		ipAddress = httpRequest.Header.Get("X-Real-IP")
-	}
-	if ipAddress == "" {
-		// fallback: use connection remote address
-		// but strip port (ip:port)
-		host, _, err := net.SplitHostPort(httpRequest.RemoteAddr)
-		if err == nil {
-			ipAddress = host
-		} else {
-			ipAddress = httpRequest.RemoteAddr
-		}
-	}
-	return ipAddress
 }
 
 // Logout is the server for the Logout endpoint.

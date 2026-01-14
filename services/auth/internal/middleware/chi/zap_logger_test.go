@@ -1,7 +1,6 @@
 package chimiddleware
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,11 +21,11 @@ func TestUnitZapLogger_WithRequestID(t *testing.T) {
 	})
 
 	// Wrap handler with ZapLogger
-	handler := ZapLogger(logger)(next)
+	handler := RequestMeta()(ZapLogger(logger)(next))
 
 	// Build request with a request ID in context
 	req := httptest.NewRequest(http.MethodGet, "/test/path", nil)
-	req = req.WithContext(context.WithValue(req.Context(), ContextRequestIDKey, "req-123"))
+	req.Header.Set("X-Request-ID", "req-123")
 
 	rr := httptest.NewRecorder()
 
@@ -77,7 +76,7 @@ func TestUnitZapLogger_WithoutRequestID(t *testing.T) {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	handler := ZapLogger(logger)(next)
+	handler := RequestMeta()(ZapLogger(logger)(next))
 
 	req := httptest.NewRequest(http.MethodGet, "/no-id", nil)
 	rr := httptest.NewRecorder()

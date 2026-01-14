@@ -9,15 +9,23 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// ContextRequestIDKey is the context key for storing the request ID.
+	ContextRequestIDKey = "request_id"
+)
+
 // ZapLogger logs the request and response using Uber Zap.
 func ZapLogger(logger *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			// Create a logger with the request ID
-			reqID, _ := r.Context().Value(ContextRequestIDKey).(string)
-			if reqID == "" {
+			var reqID string
+			requestMeta, ok := chimiddlewareutils.GetRequestMeta(r.Context())
+			if !ok || requestMeta.RequestID == "" {
 				reqID = "-"
+			} else {
+				reqID = requestMeta.RequestID
 			}
 
 			// Create a new logger with the request ID
@@ -37,10 +45,10 @@ func ZapLogger(logger *zap.Logger) func(next http.Handler) http.Handler {
 
 			latency := time.Since(start)
 
-			clientIP := r.RemoteAddr // similar to Gin's ClientIP()
+			clientIP := requestMeta.IPAddress
 
 			logger.Info("request handled",
-				zap.String("request_id", reqID),
+				zap.String(string(ContextRequestIDKey), reqID),
 				zap.String("method", r.Method),
 				zap.String("path", r.URL.Path),
 				zap.Int("status", ww.status),
