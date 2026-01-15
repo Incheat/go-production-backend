@@ -2,17 +2,16 @@
 package interceptor
 
 import (
-	"golang.org/x/time/rate"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
 // DefaultChain returns a default chain of interceptors for the user service.
 func DefaultChain(
-	limiter *rate.Limiter,
+	logger *zap.Logger,
 ) []grpc.UnaryServerInterceptor {
 	return []grpc.UnaryServerInterceptor{
 		Recovery(),
-		RateLimit(limiter),
-		Logging(),
+		Logging(logger),
 	}
 }

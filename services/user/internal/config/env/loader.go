@@ -20,18 +20,6 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
-	userCorsPublicAllowedOrigins := parseOrigins(getString("USER_CORS_PUBLIC_ALLOWED_ORIGINS"))
-	userCorsPublicAllowCredentials, err := getBoolRequired("USER_CORS_PUBLIC_ALLOW_CREDENTIALS")
-	if err != nil {
-		return nil, err
-	}
-
-	userCorsInternalAllowedOrigins := parseOrigins(getString("USER_CORS_INTERNAL_ALLOWED_ORIGINS"))
-	userCorsInternalAllowCredentials, err := getBoolRequired("USER_CORS_INTERNAL_ALLOW_CREDENTIALS")
-	if err != nil {
-		return nil, err
-	}
-
 	userMySQLHost := getString("USER_MYSQL_HOST")
 	userMySQLUser := getString("USER_MYSQL_USER")
 	userMySQLPassword := getString("USER_MYSQL_PASSWORD")
@@ -53,16 +41,6 @@ func Load() (*Config, error) {
 		Env: EnvName(env),
 		Server: Server{
 			InternalPort: Port(userInternalPort),
-		},
-		CORS: CORS{
-			Internal: CORSRule{
-				AllowedOrigins:   userCorsInternalAllowedOrigins,
-				AllowCredentials: userCorsInternalAllowCredentials,
-			},
-			Public: CORSRule{
-				AllowedOrigins:   userCorsPublicAllowedOrigins,
-				AllowCredentials: userCorsPublicAllowCredentials,
-			},
 		},
 		MySQL: MySQL{
 			Host:            userMySQLHost,
@@ -97,43 +75,6 @@ func getIntRequired(name string) (int, error) {
 		return 0, fmt.Errorf("%s: %w", name, err)
 	}
 	return v, nil
-}
-
-func getBoolRequired(name string) (bool, error) {
-	raw := getString(name)
-	if raw == "" {
-		return false, fmt.Errorf("%s: %w", name, errMissingEnv)
-	}
-	v, err := strconv.ParseBool(raw)
-	if err != nil {
-		return false, fmt.Errorf("%s: %w", name, err)
-	}
-	return v, nil
-}
-
-// parseOrigins supports:
-// - "" => nil
-// - "*" => []string{"*"}  (so CORS layer can treat it as allow-all)
-// - "a,b,c" => []string{"a","b","c"} (trimmed, empties removed)
-func parseOrigins(env string) []string {
-	env = strings.TrimSpace(env)
-	if env == "" {
-		return nil
-	}
-	if env == "*" {
-		return []string{"*"}
-	}
-
-	parts := strings.Split(env, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		out = append(out, p)
-	}
-	return out
 }
 
 func validate(cfg *Config) error {

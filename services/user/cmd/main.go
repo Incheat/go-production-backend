@@ -17,7 +17,6 @@ import (
 	userservice "github.com/incheat/go-production-backend/services/user/internal/service/user"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -34,8 +33,7 @@ func main() {
 	logger.Info("Starting user service", zap.String("env", string(cfg.Env)))
 	logger.Info("GRPC server internal port", zap.Int("port", int(cfg.Server.InternalPort)))
 
-	limiter := rate.NewLimiter(100, 100)
-	interceptors := interceptor.DefaultChain(limiter)
+	interceptors := interceptor.DefaultChain(logger)
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(interceptors...),
 	)
