@@ -66,6 +66,31 @@ static_resources:
                   random_sampling:  { value: 100.0 }
                   overall_sampling: { value: 100.0 }
 
+                generate_request_id: true
+                
+                # Observability: access logs (JSON)
+                access_log:
+                  - name: envoy.access_loggers.stdout
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                      log_format:
+                        json_format:
+                          ts: "%START_TIME%"
+                          method: "%REQ(:METHOD)%"
+                          path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+                          status: "%RESPONSE_CODE%"
+                          response_flags: "%RESPONSE_FLAGS%"
+                          upstream_cluster: "%UPSTREAM_CLUSTER%"
+                          upstream_host: "%UPSTREAM_HOST%"
+                          duration_ms: "%DURATION%"
+                          user_agent: "%REQ(USER-AGENT)%"
+                          jwt_sub: "%REQ(x-jwt-sub)%"
+                          b3_traceid: "%REQ(x-b3-traceid)%"
+                          traceparent: "%REQ(traceparent)%"
+                          b3_traceid: "%REQ(x-b3-traceid)%"
+                          b3_spanid: "%REQ(x-b3-spanid)%"
+                          x_request_id: "%REQ(x-request-id)%"
+
                 route_config:
                   name: user_grpc_routes
                   virtual_hosts:
