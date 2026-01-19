@@ -1,5 +1,52 @@
 services:
   # =========================
+  # DOZZLE
+  # =========================
+  dozzle:
+    image: amir20/dozzle:latest
+    ports:
+      - "9999:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # =========================
+  # OTEL COLLECTOR
+  # =========================
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config", "/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./infra/otel/otel-collector.yaml:/etc/otel-collector-config.yaml:ro
+    # ports:
+    #   - "4317:4317" # OTLP gRPC
+    #   - "4318:4318" # OTLP HTTP
+    #   - "9411:9411" # Zipkin
+
+  # =========================
+  # TEMPO
+  # =========================
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./infra/tempo/tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - "3200:3200"   # tempo query
+      # - "4317"        # otlp grpc (optional)
+      # - "4318"        # otlp http (optional)
+
+  # =========================
+  # GRAFANA
+  # =========================
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+
+  # =========================
   # STARTUP PROBE
   # =========================
   startup-probe:
@@ -65,6 +112,49 @@ services:
       start_period: 10s
 
   # =========================
+  # INGRESS-ENVOY
+  # =========================
+  ingress-envoy:
+    image: envoyproxy/envoy:v1.36.4
+    command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
+    volumes:
+      - ./infra/envoy/ingress-envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./infra/security/mtls/pki/ingress-sds/run:/var/run/step-sds:ro
+      - ./infra/security/tls/localhost:/etc/envoy/certs:ro
+    depends_on:
+      ingress-sds:
+        condition: service_healthy
+    ports:
+      - "8081:18080"
+      - "19000:19000"
+  
+  ingress-sds:
+    image: smallstep/step-sds:latest
+    volumes:
+      - ./infra/security/mtls/pki/ingress-sds:/home/step
+      - ./infra/security/mtls/pki/secrets:/run/secrets:ro
+      - ./infra/security/mtls/pki/ingress-sds/run:/var/run/step-sds
+    depends_on:
+      step-ca:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -c
+      - >
+        set -eux;
+        rm -f /var/run/step-sds/sds.sock;
+        ls -la /var/run/step-sds;
+        exec step-sds run /home/step/config/sds.json
+        --password-file /run/secrets/ingress.sds.password
+        --provisioner-password-file /run/secrets/ca.password
+    healthcheck:
+      test: ["CMD-SHELL", "test -S /var/run/step-sds/sds.sock && pgrep -f 'step-sds' >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  # =========================
   # AUTH: app + envoy + step-sds
   # =========================
   auth:
@@ -81,18 +171,17 @@ services:
     # No ports exposed
 
   auth-envoy:
-    image: envoyproxy/envoy:v1.31-latest
+    image: envoyproxy/envoy:v1.36.4
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     volumes:
       - ./infra/envoy/auth-envoy.yaml:/etc/envoy/envoy.yaml:ro
       - ./infra/security/mtls/pki/auth-sds/run:/var/run/step-sds:ro
-      - ./infra/security/tls/localhost:/etc/envoy/certs:ro
     depends_on:
       auth-sds:
         condition: service_healthy
     ports:
       # HTTP: auth-envoy:18080 -> auth:8080
-      - "8081:18080"
+      # - "8081:18080"
       # gRPC: auth-envoy:19080 -> auth:9090
       # Envoy admin
       - "19001:19000"   # http://localhost:19001/stats/prometheus
@@ -147,7 +236,7 @@ services:
     # No ports exposed
 
   user-envoy:
-    image: envoyproxy/envoy:v1.31-latest
+    image: envoyproxy/envoy:v1.36.4
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     volumes:
       - ./infra/envoy/user-envoy.yaml:/etc/envoy/envoy.yaml:ro

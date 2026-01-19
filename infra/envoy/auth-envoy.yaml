@@ -19,11 +19,28 @@ static_resources:
             name: envoy.transport_sockets.tls
             typed_config:
               "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-              require_client_certificate: false
+              require_client_certificate: true
               common_tls_context:
-                tls_certificates:
-                  - certificate_chain: { filename: /etc/envoy/certs/localhost.crt } # fullchain.crt
-                    private_key:        { filename: /etc/envoy/certs/localhost.key }
+                tls_certificate_sds_secret_configs:
+                  - name: auth-envoy
+                    sds_config:
+                      resource_api_version: V3
+                      api_config_source:
+                        api_type: GRPC
+                        transport_api_version: V3
+                        grpc_services:
+                          - envoy_grpc:
+                              cluster_name: auth_sds_uds
+                validation_context_sds_secret_config:
+                  name: trusted_ca
+                  sds_config:
+                    resource_api_version: V3
+                    api_config_source:
+                      api_type: GRPC
+                      transport_api_version: V3
+                      grpc_services:
+                        - envoy_grpc:
+                            cluster_name: auth_sds_uds
                 alpn_protocols: ["h2", "http/1.1"]
           filters:
             - name: envoy.filters.network.http_connection_manager
@@ -62,6 +79,11 @@ static_resources:
 
                 generate_request_id: true
 
+                tracing:
+                  client_sampling:  { value: 100.0 }
+                  random_sampling:  { value: 100.0 }
+                  overall_sampling: { value: 100.0 }
+
                 route_config:
                   name: auth_http_routes
                   virtual_hosts:
@@ -69,21 +91,15 @@ static_resources:
                       domains: ["*"]
                       routes:
                         - match: { path: "/v1/login" }
+                          decorator:
+                            operation: "auth -> inbound"
                           route:
                             cluster: auth_app_http
                             timeout: 5s
-                          typed_per_filter_config:
-                            envoy.filters.http.cors:
-                              "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
-                              allow_origin_string_match:
-                                - exact: "http://localhost:3000"
-                              allow_methods: "POST,OPTIONS"
-                              allow_headers: "content-type,authorization"
-                              expose_headers: "x-request-id"
-                              allow_credentials: true
-                              max_age: "86400"
 
                         - match: { prefix: "/" }
+                          decorator:
+                            operation: "auth -> inbound"
                           route:
                             cluster: auth_app_http
                             timeout: 5s
@@ -105,7 +121,7 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
                       providers:
                         myjwt:
-                          issuer: "https://auth.public"
+                          issuer: "https://auth.dev.internal"
                           audiences: ["auth-api"]
                           from_headers:
                             - name: authorization
@@ -127,32 +143,6 @@ static_resources:
                           requires:
                             provider_name: myjwt
 
-                  - name: envoy.filters.http.rbac
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
-                      rules:
-                        action: ALLOW
-                        policies:
-                          allow_login_public:
-                            permissions:
-                              - url_path:
-                                  path:
-                                    exact: "/v1/login"
-                            principals:
-                              - any: true
-                          allow_auth_read:
-                            permissions:
-                              - any: true
-                            principals:
-                              - metadata:
-                                  filter: envoy.filters.http.jwt_authn
-                                  path:
-                                    - key: payload
-                                    - key: scope
-                                  value:
-                                    string_match:
-                                      contains: "auth:read"
-
                   - name: envoy.filters.http.lua
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
@@ -172,6 +162,28 @@ static_resources:
                               handle:headers():replace("x-jwt-scope", tostring(payload["scope"]))
                             end
                           end
+
+                  - name: envoy.filters.http.rbac
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.rbac.v3.RBAC
+                      rules:
+                        action: ALLOW
+                        policies:
+                          allow_login_public:
+                            permissions:
+                              - url_path:
+                                  path:
+                                    exact: "/v1/login"
+                            principals:
+                              - any: true
+                          allow_auth_read:
+                            permissions:
+                              - any: true
+                            principals:
+                              - header:
+                                  name: "x-jwt-scope"
+                                  string_match:
+                                    contains: "auth:read"
 
                   - name: envoy.filters.http.local_ratelimit
                     typed_config:
@@ -281,6 +293,11 @@ static_resources:
 
                 http2_protocol_options: {}
 
+                tracing:
+                  client_sampling:  { value: 100.0 }
+                  random_sampling:  { value: 100.0 }
+                  overall_sampling: { value: 100.0 }
+
                 route_config:
                   name: auth_grpc_routes
                   virtual_hosts:
@@ -288,6 +305,8 @@ static_resources:
                       domains: ["*"]
                       routes:
                         - match: { prefix: "/" }
+                          decorator:
+                            operation: "auth -> user"
                           route:
                             cluster: auth_app_grpc
                             timeout: 5s
@@ -312,7 +331,7 @@ static_resources:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
     # =========================
-    # (C) OUTBOUND (to user app :15001)
+    # (D) OUTBOUND (to user app :15001)
     # =========================
     - name: auth_outbound_to_user_grpc
       address:
@@ -325,6 +344,10 @@ static_resources:
                 stat_prefix: auth_out_to_user
                 codec_type: AUTO
                 http2_protocol_options: {}
+                tracing:
+                  client_sampling:  { value: 100.0 }
+                  random_sampling:  { value: 100.0 }
+                  overall_sampling: { value: 100.0 }
                 route_config:
                   name: out_to_user
                   virtual_hosts:
@@ -396,9 +419,8 @@ static_resources:
     # JWKS (JWT)
     # =========================
     - name: jwks_cluster
-      type: STRICT_DNS
+      type: STATIC
       connect_timeout: 5s
-      dns_lookup_family: V4_ONLY
       lb_policy: ROUND_ROBIN
       load_assignment:
         cluster_name: jwks_cluster
@@ -406,7 +428,7 @@ static_resources:
           - lb_endpoints:
               - endpoint:
                   address:
-                    socket_address: { address: auth, port_value: 8080 }
+                    socket_address: { address: 127.0.0.1, port_value: 8080 }
 
     # =========================
     # auth SDS cluster (UDS + gRPC)
@@ -481,6 +503,24 @@ static_resources:
         interval: 5s
         base_ejection_time: 30s
         max_ejection_percent: 50
+    
+    # =========================
+    # otel_collector_zipkin cluster
+    # =========================
+    - name: otel_collector_zipkin
+      type: LOGICAL_DNS
+      connect_timeout: 5s
+      lb_policy: ROUND_ROBIN
+      dns_lookup_family: V4_ONLY
+      load_assignment:
+        cluster_name: otel_collector_zipkin
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: otel-collector
+                  port_value: 9411
 
 layered_runtime:
   layers:
@@ -512,6 +552,16 @@ overload_manager:
         - name: envoy.resource_monitors.fixed_heap
           threshold:
             value: 0.95
+
+tracing:
+  http:
+    name: envoy.tracers.zipkin
+    typed_config:
+      "@type": type.googleapis.com/envoy.config.trace.v3.ZipkinConfig
+      collector_cluster: otel_collector_zipkin
+      collector_endpoint: "/api/v2/spans"
+      collector_endpoint_version: HTTP_JSON
+      trace_context_option: USE_B3_WITH_W3C_PROPAGATION
 
 admin:
   access_log:

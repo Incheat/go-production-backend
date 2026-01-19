@@ -41,7 +41,7 @@ init-step-ca-service: ## Initialize step-ca service
 # 2. Run step-sds(e.g. auth) init command in the default network(e.g. go-production-backend_default)
 #
 # docker run --rm -it --network go-production-backend_default \
-# 	-v "$PWD/infra/security/mtls/pki/auth-sds:/home/step" \
+# 	-v "$PWD/infra/security/mtls/pki/$(SERVICE)-sds:/home/step" \
 # 	smallstep/step-sds:latest \
 # 	step-sds init --ca-url "https://step-ca:9000" --root "/home/step/root.crt"
 #
@@ -57,3 +57,10 @@ init-step-ca-service: ## Initialize step-ca service
 # make step-ca-down
 #
 # 4. Revise sds.json file
+#
+#   "network": "unix",
+#   "address": "/var/run/step-sds/sds.sock",
+#
+# 5. add run directory for step-sds as runtime unix socket directory
+#
+# mkdir -p infra/security/mtls/pki/$(SERVICE)-sds/run

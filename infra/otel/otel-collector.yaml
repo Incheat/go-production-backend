@@ -1,0 +1,28 @@
+receivers:
+  otlp:
+    protocols:
+      grpc: {}
+      http: {}
+
+  zipkin:
+    endpoint: 0.0.0.0:9411
+
+processors:
+  batch: {}
+
+exporters:
+  debug:
+    verbosity: detailed
+  otlp:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  # otlphttp/tempo:
+  #   endpoint: http://tempo:4318
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp, zipkin]
+      processors: [batch]
+      exporters: [debug, otlp]

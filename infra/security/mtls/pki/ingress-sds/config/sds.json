@@ -1,0 +1,18 @@
+{
+   "network": "unix",
+   "address": "/var/run/step-sds/sds.sock",
+   "root": "/home/step/sds/root_ca.crt",
+   "crt": "/home/step/sds/sds_server.crt",
+   "key": "/home/step/sds/sds_server_key",
+   "authorizedIdentity": "ingress-envoy",
+   "authorizedFingerprint": "225695578f0ad8c2a6e874eaf618e0858139a442bd98371c782f3159c7efd61e",
+   "provisioner": {
+      "issuer": "admin",
+      "kid": "AbDailGz1Fb9JwzeiYeaOQEXQn0BG6hG9z_ht4AzVio",
+      "ca-url": "https://step-ca:9000",
+      "root": "/home/step/root.crt"
+   },
+   "logger": {
+      "format": "text"
+   }
+}
