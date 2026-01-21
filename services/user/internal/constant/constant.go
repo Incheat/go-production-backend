@@ -12,4 +12,8 @@ const (
 	EnvConfigTmpl = "config.%s.yaml"
 	// APIResponseVersion is the version of the API response.
 	APIResponseVersion = "v0.1.0"
+	// DefaultOTELEndpoint is the default endpoint for the OpenTelemetry.
+	DefaultOTELEndpoint = "otel-collector:4317"
+	// ServiceName is the name of the service for the user.
+	ServiceName = "user"
 )

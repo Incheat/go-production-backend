@@ -11,14 +11,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
 	envconfig "github.com/incheat/go-production-backend/services/auth/internal/config/env"
+	"github.com/incheat/go-production-backend/services/auth/internal/constant"
 	usergateway "github.com/incheat/go-production-backend/services/auth/internal/gateway/user/grpc"
 	authhandler "github.com/incheat/go-production-backend/services/auth/internal/handler/http"
 	chimiddleware "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi"
+	"github.com/incheat/go-production-backend/services/auth/internal/obs"
 	redisrepo "github.com/incheat/go-production-backend/services/auth/internal/repository/redis"
 	authservice "github.com/incheat/go-production-backend/services/auth/internal/service/auth"
 	"github.com/incheat/go-production-backend/services/auth/internal/token"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -35,6 +38,17 @@ func main() {
 	logger.Info("Starting auth service", zap.String("env", string(cfg.Env)))
 	logger.Info("Http server port", zap.Int("port", int(cfg.Server.PublicPort)))
 
+	ctx := context.Background()
+	otelShutdown, err := obs.InitTracer(ctx, constant.ServiceName, cfg.OTEL.Endpoint)
+	if err != nil {
+		log.Fatalf("Error initializing OpenTelemetry tracer: %v", err)
+	}
+	defer func() {
+		if err := otelShutdown(ctx); err != nil {
+			logger.Error("Error shutting down OpenTelemetry tracer", zap.Error(err))
+		}
+	}()
+
 	// Get OpenAPI definition from embedded spec
 	openAPISpec, err := servergen.GetSwagger()
 	if err != nil {
@@ -48,7 +62,6 @@ func main() {
 		DB:       cfg.Redis.DB,
 	})
 
-	ctx := context.Background()
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		panic(fmt.Errorf("failed to connect to Redis: %w", err))
 	}
@@ -109,9 +122,12 @@ func main() {
 	// ✅ JWKS endpoint (NOT behind OpenAPI validator)
 	jwksPath := cfg.JWT.JWKSPath
 	if jwksPath == "" {
-		jwksPath = "/.well-known/jwks.json"
+		jwksPath = constant.JWKSPath
 	}
 	rootRouter.Get(jwksPath, jwtTokenMaker.JWKSHandler)
+
+	// ✅ Traced router
+	tracedRouter := chi.NewRouter()
 
 	// HTTP API router
 	apiRouter := chi.NewRouter()
@@ -127,12 +143,24 @@ func main() {
 
 	apiHandler := servergen.HandlerFromMux(strict, apiRouter)
 
-	rootRouter.Mount("/", apiHandler)
+	tracedRouter.Mount("/", apiHandler)
+
+	rootRouter.Mount("/", otelhttp.NewHandler(
+		tracedRouter,
+		constant.SpanNameAuthHTTP,
+	))
 
 	var g errgroup.Group
 
+	listenAddr := fmt.Sprintf(":%d", int(cfg.Server.PublicPort))
+
+	srv := &http.Server{
+		Addr:    listenAddr,
+		Handler: rootRouter,
+	}
+
 	g.Go(func() error {
-		return http.ListenAndServe(fmt.Sprintf(":%d", int(cfg.Server.PublicPort)), rootRouter)
+		return srv.ListenAndServe()
 	})
 
 	if err := g.Wait(); err != nil {

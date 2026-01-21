@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/incheat/go-production-backend/services/auth/internal/constant"
 )
 
 // errMissingEnv is the error returned when a required environment variable is missing.
@@ -33,6 +35,9 @@ func Load() (*Config, error) {
 	authJWTIssuer := getString("AUTH_JWT_ISSUER")
 	authJWTAudience := getString("AUTH_JWT_AUDIENCE")
 	authJWKSPath := getString("AUTH_JWT_JWKS_PATH")
+	if authJWKSPath == "" {
+		authJWKSPath = constant.JWKSPath
+	}
 	authJWTExpireRaw, err := getIntRequired("AUTH_JWT_EXPIRE")
 	if err != nil {
 		return nil, err
@@ -50,6 +55,8 @@ func Load() (*Config, error) {
 	}
 
 	authUserGatewayInternalAddress := getString("USER_GRPC_ADDR")
+
+	otelEndpoint := getString("OTEL_ENDPOINT")
 
 	cfg := &Config{
 		Env: EnvName(env),
@@ -76,6 +83,9 @@ func Load() (*Config, error) {
 			NumBytes: authRefreshNumBytes,
 			EndPoint: authRefreshEndPoint,
 			MaxAge:   authRefreshMaxAge,
+		},
+		OTEL: OTEL{
+			Endpoint: otelEndpoint,
 		},
 	}
 

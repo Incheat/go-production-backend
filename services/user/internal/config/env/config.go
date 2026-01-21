@@ -18,6 +18,7 @@ type Config struct {
 	Env    EnvName
 	Server Server
 	MySQL  MySQL
+	OTEL   OTEL
 }
 
 // Server is the configuration for the server.
@@ -37,4 +38,9 @@ type MySQL struct {
 	MaxOpenConns    int
 	MaxIdleConns    int
 	ConnMaxLifetime int // seconds
+}
+
+// OTEL is the configuration for the OpenTelemetry.
+type OTEL struct {
+	Endpoint string
 }

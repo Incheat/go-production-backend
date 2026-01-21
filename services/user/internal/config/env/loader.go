@@ -37,6 +37,8 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	otelEndpoint := getString("OTEL_ENDPOINT")
+
 	cfg := &Config{
 		Env: EnvName(env),
 		Server: Server{
@@ -50,6 +52,9 @@ func Load() (*Config, error) {
 			MaxOpenConns:    userMySQLMaxOpenConns,
 			MaxIdleConns:    userMySQLMaxIdleConns,
 			ConnMaxLifetime: userMySQLConnMaxLifetime,
+		},
+		OTEL: OTEL{
+			Endpoint: otelEndpoint,
 		},
 	}
 

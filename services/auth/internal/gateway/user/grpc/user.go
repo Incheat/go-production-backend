@@ -7,6 +7,7 @@ import (
 
 	userpb "github.com/incheat/go-production-backend/api/user/grpc/gen"
 	usermodel "github.com/incheat/go-production-backend/services/user/pkg/model"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -19,9 +20,11 @@ type UserGateway struct {
 
 // New creates a new UserGateway.
 func New(addr string) (*UserGateway, error) {
+
 	conn, err := grpc.NewClient(
 		addr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	)
 	if err != nil {
 		return nil, err

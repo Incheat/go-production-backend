@@ -48,6 +48,8 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 stat_prefix: user_grpc_inbound
                 codec_type: AUTO
+                generate_request_id: true
+                preserve_external_request_id: true
 
                 internal_address_config:
                   unix_sockets: true
@@ -62,9 +64,9 @@ static_resources:
                 http2_protocol_options: {}
 
                 tracing:
-                  client_sampling:  { value: 100.0 }
-                  random_sampling:  { value: 100.0 }
-                  overall_sampling: { value: 100.0 }
+                  client_sampling:  { value: 0.0 }
+                  random_sampling:  { value: 0.0 }
+                  overall_sampling: { value: 0.0 }
 
                 generate_request_id: true
                 
@@ -148,7 +150,13 @@ static_resources:
                     - address_prefix: "192.168.0.0"
                       prefix_len: 16
 
+                generate_request_id: false
                 http2_protocol_options: {}
+
+                tracing:
+                  client_sampling:  { value: 0.0 }
+                  random_sampling:  { value: 0.0 }
+                  overall_sampling: { value: 0.0 }
 
                 route_config:
                   name: user_internal_health_routes
@@ -273,15 +281,17 @@ overload_manager:
           threshold:
             value: 0.95
 
-tracing:
-  http:
-    name: envoy.tracers.zipkin
-    typed_config:
-      "@type": type.googleapis.com/envoy.config.trace.v3.ZipkinConfig
-      collector_cluster: otel_collector_zipkin
-      collector_endpoint: "/api/v2/spans"
-      collector_endpoint_version: HTTP_JSON
-      trace_context_option: USE_B3_WITH_W3C_PROPAGATION
+# tracing:
+#   http:
+#     name: envoy.tracers.zipkin
+#     typed_config:
+#       "@type": type.googleapis.com/envoy.config.trace.v3.ZipkinConfig
+#       collector_cluster: otel_collector_zipkin
+#       collector_endpoint: "/api/v2/spans"
+#       collector_endpoint_version: HTTP_JSON
+#       trace_context_option: USE_B3_WITH_W3C_PROPAGATION
+#       shared_span_context: false
+#       trace_id_128bit: true
 
 admin:
   access_log:

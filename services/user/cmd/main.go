@@ -7,14 +7,21 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	userpb "github.com/incheat/go-production-backend/api/user/grpc/gen"
 	envconfig "github.com/incheat/go-production-backend/services/user/internal/config/env"
+	"github.com/incheat/go-production-backend/services/user/internal/constant"
 	userhandler "github.com/incheat/go-production-backend/services/user/internal/handler/grpc"
 	"github.com/incheat/go-production-backend/services/user/internal/interceptor"
+	"github.com/incheat/go-production-backend/services/user/internal/obs"
 	userrepo "github.com/incheat/go-production-backend/services/user/internal/repository/mysql"
 	userservice "github.com/incheat/go-production-backend/services/user/internal/service/user"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -33,9 +40,34 @@ func main() {
 	logger.Info("Starting user service", zap.String("env", string(cfg.Env)))
 	logger.Info("GRPC server internal port", zap.Int("port", int(cfg.Server.InternalPort)))
 
+	// ------------------------------------------------------------------
+	// Context & signal
+	// ------------------------------------------------------------------
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// ------------------------------------------------------------------
+	// OpenTelemetry (MUST be before creating grpcServer)
+	// ------------------------------------------------------------------
+	otelShutdown, err := obs.InitTracer(ctx, constant.ServiceName, cfg.OTEL.Endpoint)
+	if err != nil {
+		log.Fatalf("Error initializing OpenTelemetry tracer: %v", err)
+	}
+	defer func() {
+		if err := otelShutdown(ctx); err != nil {
+			logger.Error("Error shutting down OpenTelemetry tracer", zap.Error(err))
+		}
+	}()
+
 	interceptors := interceptor.DefaultChain(logger)
+
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(interceptors...),
+		grpc.StatsHandler(
+			otelgrpc.NewServerHandler(
+				otelgrpc.WithFilter(filters.Not(filters.HealthCheck())),
+			),
+		),
 	)
 
 	// ----------------------------

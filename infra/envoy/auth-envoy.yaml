@@ -83,11 +83,12 @@ static_resources:
                           x_request_id: "%REQ(x-request-id)%"
 
                 generate_request_id: true
+                preserve_external_request_id: true
 
                 tracing:
-                  client_sampling:  { value: 100.0 }
-                  random_sampling:  { value: 100.0 }
-                  overall_sampling: { value: 100.0 }
+                  client_sampling:  { value: 0.0 }
+                  random_sampling:  { value: 0.0 }
+                  overall_sampling: { value: 0.0 }
 
                 route_config:
                   name: auth_http_routes
@@ -228,6 +229,11 @@ static_resources:
                 codec_type: AUTO
                 generate_request_id: false
 
+                tracing:
+                  client_sampling:  { value: 0.0 }
+                  random_sampling:  { value: 0.0 }
+                  overall_sampling: { value: 0.0 }
+
                 route_config:
                   name: auth_internal_health_routes
                   virtual_hosts:
@@ -285,6 +291,8 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 stat_prefix: auth_grpc_inbound
                 codec_type: AUTO
+                generate_request_id: true
+                preserve_external_request_id: true
 
                 internal_address_config:
                   unix_sockets: true
@@ -299,9 +307,9 @@ static_resources:
                 http2_protocol_options: {}
 
                 tracing:
-                  client_sampling:  { value: 100.0 }
-                  random_sampling:  { value: 100.0 }
-                  overall_sampling: { value: 100.0 }
+                  client_sampling:  { value: 0.0 }
+                  random_sampling:  { value: 0.0 }
+                  overall_sampling: { value: 0.0 }
 
                 route_config:
                   name: auth_grpc_routes
@@ -310,8 +318,6 @@ static_resources:
                       domains: ["*"]
                       routes:
                         - match: { prefix: "/" }
-                          decorator:
-                            operation: "auth -> user"
                           route:
                             cluster: auth_app_grpc
                             timeout: 5s
@@ -350,11 +356,12 @@ static_resources:
                 codec_type: AUTO
                 http2_protocol_options: {}
                 tracing:
-                  client_sampling:  { value: 100.0 }
-                  random_sampling:  { value: 100.0 }
-                  overall_sampling: { value: 100.0 }
+                  client_sampling:  { value: 0.0 }
+                  random_sampling:  { value: 0.0 }
+                  overall_sampling: { value: 0.0 }
                 
                 generate_request_id: true
+                preserve_external_request_id: true
 
                 # Observability: access logs (JSON)
                 access_log:
@@ -386,6 +393,8 @@ static_resources:
                       domains: ["*"]
                       routes:
                         - match: { prefix: "/" }
+                          decorator:
+                            operation: "auth -> user"
                           route:
                             cluster: user_via_sidecar_grpc
                             timeout: 5s
@@ -584,15 +593,17 @@ overload_manager:
           threshold:
             value: 0.95
 
-tracing:
-  http:
-    name: envoy.tracers.zipkin
-    typed_config:
-      "@type": type.googleapis.com/envoy.config.trace.v3.ZipkinConfig
-      collector_cluster: otel_collector_zipkin
-      collector_endpoint: "/api/v2/spans"
-      collector_endpoint_version: HTTP_JSON
-      trace_context_option: USE_B3_WITH_W3C_PROPAGATION
+# tracing:
+#   http:
+#     name: envoy.tracers.zipkin
+#     typed_config:
+#       "@type": type.googleapis.com/envoy.config.trace.v3.ZipkinConfig
+#       collector_cluster: otel_collector_zipkin
+#       collector_endpoint: "/api/v2/spans"
+#       collector_endpoint_version: HTTP_JSON
+#       trace_context_option: USE_B3_WITH_W3C_PROPAGATION
+#       shared_span_context: false
+#       trace_id_128bit: true
 
 admin:
   access_log:

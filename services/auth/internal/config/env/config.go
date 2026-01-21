@@ -23,6 +23,7 @@ type Config struct {
 	JWT         JWT
 	Refresh     Refresh
 	UserGateway UserGateway
+	OTEL        OTEL
 }
 
 // Server is the configuration for the server.
@@ -60,4 +61,9 @@ type Refresh struct {
 	NumBytes int
 	EndPoint string
 	MaxAge   int
+}
+
+// OTEL is the configuration for the OpenTelemetry.
+type OTEL struct {
+	Endpoint string
 }
