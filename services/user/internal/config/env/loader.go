@@ -20,6 +20,11 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	userMetricsPort, err := getIntRequired("PROM_METRICS_PORT")
+	if err != nil {
+		return nil, err
+	}
+
 	userMySQLHost := getString("USER_MYSQL_HOST")
 	userMySQLUser := getString("USER_MYSQL_USER")
 	userMySQLPassword := getString("USER_MYSQL_PASSWORD")
@@ -43,6 +48,7 @@ func Load() (*Config, error) {
 		Env: EnvName(env),
 		Server: Server{
 			InternalPort: Port(userInternalPort),
+			MetricsPort:  Port(userMetricsPort),
 		},
 		MySQL: MySQL{
 			Host:            userMySQLHost,

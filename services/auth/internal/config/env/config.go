@@ -28,7 +28,8 @@ type Config struct {
 
 // Server is the configuration for the server.
 type Server struct {
-	PublicPort Port
+	PublicPort  Port
+	MetricsPort Port
 }
 
 // UserGateway is the configuration for the user gateway.

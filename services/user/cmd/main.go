@@ -19,6 +19,7 @@ import (
 	"github.com/incheat/go-production-backend/services/user/internal/interceptor"
 	"github.com/incheat/go-production-backend/services/user/internal/obs"
 	userrepo "github.com/incheat/go-production-backend/services/user/internal/repository/mysql"
+	"github.com/incheat/go-production-backend/services/user/internal/server"
 	userservice "github.com/incheat/go-production-backend/services/user/internal/service/user"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
@@ -39,6 +40,14 @@ func main() {
 
 	logger.Info("Starting user service", zap.String("env", string(cfg.Env)))
 	logger.Info("GRPC server internal port", zap.Int("port", int(cfg.Server.InternalPort)))
+
+	// Initialize Prometheus metrics
+	obs.Init()
+
+	// Start metrics server
+	if err := server.StartMetricsServer(constant.ServiceName, fmt.Sprintf(":%d", int(cfg.Server.MetricsPort)), logger); err != nil {
+		log.Fatalf("Error starting metrics server: %v", err)
+	}
 
 	// ------------------------------------------------------------------
 	// Context & signal

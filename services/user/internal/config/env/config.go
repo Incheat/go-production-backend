@@ -24,6 +24,7 @@ type Config struct {
 // Server is the configuration for the server.
 type Server struct {
 	InternalPort Port
+	MetricsPort  Port
 }
 
 // Port is the port for the server.

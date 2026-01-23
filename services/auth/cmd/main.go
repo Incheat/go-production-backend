@@ -17,6 +17,7 @@ import (
 	chimiddleware "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi"
 	"github.com/incheat/go-production-backend/services/auth/internal/obs"
 	redisrepo "github.com/incheat/go-production-backend/services/auth/internal/repository/redis"
+	"github.com/incheat/go-production-backend/services/auth/internal/server"
 	authservice "github.com/incheat/go-production-backend/services/auth/internal/service/auth"
 	"github.com/incheat/go-production-backend/services/auth/internal/token"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
@@ -48,6 +49,14 @@ func main() {
 			logger.Error("Error shutting down OpenTelemetry tracer", zap.Error(err))
 		}
 	}()
+
+	// Initialize Prometheus metrics
+	obs.Init()
+
+	// Start metrics server
+	if err := server.StartMetricsServer(constant.ServiceName, fmt.Sprintf(":%d", int(cfg.Server.MetricsPort)), logger); err != nil {
+		log.Fatalf("Error starting metrics server: %v", err)
+	}
 
 	// Get OpenAPI definition from embedded spec
 	openAPISpec, err := servergen.GetSwagger()

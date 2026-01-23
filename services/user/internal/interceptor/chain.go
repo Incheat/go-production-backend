@@ -12,6 +12,8 @@ func DefaultChain(
 ) []grpc.UnaryServerInterceptor {
 	return []grpc.UnaryServerInterceptor{
 		Recovery(),
+		ZapTraceUnaryInterceptor(logger),
 		Logging(logger),
+		PromMetrics(),
 	}
 }

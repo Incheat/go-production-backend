@@ -23,6 +23,11 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	authMetricsPort, err := getIntRequired("PROM_METRICS_PORT")
+	if err != nil {
+		return nil, err
+	}
+
 	authRedisHost := getString("AUTH_REDIS_HOST")
 	authRedisPassword := getString("AUTH_REDIS_PASSWORD")
 	authRedisDB, err := getIntRequired("AUTH_REDIS_DB")
@@ -61,7 +66,8 @@ func Load() (*Config, error) {
 	cfg := &Config{
 		Env: EnvName(env),
 		Server: Server{
-			PublicPort: Port(authPublicPort),
+			PublicPort:  Port(authPublicPort),
+			MetricsPort: Port(authMetricsPort),
 		},
 		UserGateway: UserGateway{
 			InternalAddress: authUserGatewayInternalAddress,

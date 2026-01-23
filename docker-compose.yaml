@@ -10,6 +10,44 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
   # =========================
+  # PROMETHEUS
+  # =========================
+  prometheus:
+    image: prom/prometheus:latest
+    networks: [obsnet]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yaml
+    volumes:
+      - ./infra/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+    ports:
+      - "9090:9090"
+
+  # =========================
+  # LOKI
+  # =========================
+  loki:
+    image: grafana/loki:latest
+    networks: [obsnet]
+    ports:
+      - "3100:3100"
+    command: ["-config.file=/etc/loki/config.yaml"]
+    volumes:
+      - ./infra/loki/loki.yaml:/etc/loki/config.yaml:ro
+
+  # =========================
+  # PROMTAIL
+  # =========================
+  promtail:
+    image: grafana/promtail:latest
+    networks: [obsnet]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ./infra/promtail/promtail.yaml:/etc/promtail/config.yaml:ro
+      - promtail-positions:/tmp
+    command: ["-config.file=/etc/promtail/config.yaml"]
+
+  # =========================
   # OTEL COLLECTOR
   # =========================
   otel-collector:
@@ -18,6 +56,8 @@ services:
     command: ["--config", "/etc/otel-collector-config.yaml"]
     volumes:
       - ./infra/otel/otel-collector.yaml:/etc/otel-collector-config.yaml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     # ports:
     #   - "4317:4317" # OTLP gRPC
     #   - "4318:4318" # OTLP HTTP
@@ -122,6 +162,8 @@ services:
   # =========================
   ingress-envoy:
     image: envoyproxy/envoy:v1.36.4
+    labels:
+      - "obs.logs=true"
     networks: [edgenet, obsnet]
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     volumes:
@@ -167,6 +209,8 @@ services:
   # =========================
   auth:
     image: auth:dev
+    labels:
+      - "obs.logs=true"
     env_file:
       - .env.local
     network_mode: "service:auth-envoy"
@@ -180,6 +224,8 @@ services:
 
   auth-envoy:
     image: envoyproxy/envoy:v1.36.4
+    labels:
+      - "obs.logs=true"
     networks: [authnet, obsnet]
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     volumes:
@@ -234,6 +280,8 @@ services:
   # =========================
   user:
     image: user:dev
+    labels:
+      - "obs.logs=true"
     env_file:
       - .env.local
     network_mode: "service:user-envoy"
@@ -247,6 +295,8 @@ services:
 
   user-envoy:
     image: envoyproxy/envoy:v1.36.4
+    labels:
+      - "obs.logs=true"
     networks: [usernet, obsnet]
     command: ["-c", "/etc/envoy/envoy.yaml", "--log-level", "info"]
     volumes:
@@ -300,3 +350,6 @@ networks:
   edgenet: {}
   ctrlnet: {}
   obsnet: {}
+
+volumes:
+  promtail-positions: {}
