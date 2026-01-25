@@ -10,7 +10,7 @@ KIND_NAME ?= dev
 
 build-probe: ## Build probe image
 	@echo "Building probe image"
-	docker buildx build -f infra/probe/Dockerfile \
+	docker buildx build -f infra/obs/probe/Dockerfile \
 		-t probe:$(ENV) \
 		--platform linux/arm64 \
 		--load .
