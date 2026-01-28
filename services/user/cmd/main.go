@@ -13,13 +13,15 @@ import (
 	"time"
 
 	userpb "github.com/incheat/go-production-backend/api/user/grpc/gen"
+	obsconfig "github.com/incheat/go-production-backend/pkg/obs/config"
+	"github.com/incheat/go-production-backend/pkg/obs/logging"
+	obsmetrics "github.com/incheat/go-production-backend/pkg/obs/metrics"
+	obstracing "github.com/incheat/go-production-backend/pkg/obs/tracing"
 	envconfig "github.com/incheat/go-production-backend/services/user/internal/config/env"
 	"github.com/incheat/go-production-backend/services/user/internal/constant"
 	userhandler "github.com/incheat/go-production-backend/services/user/internal/handler/grpc"
 	"github.com/incheat/go-production-backend/services/user/internal/interceptor"
-	"github.com/incheat/go-production-backend/services/user/internal/obs"
 	userrepo "github.com/incheat/go-production-backend/services/user/internal/repository/mysql"
-	"github.com/incheat/go-production-backend/services/user/internal/server"
 	userservice "github.com/incheat/go-production-backend/services/user/internal/service/user"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
@@ -36,17 +38,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading config: %v", err)
 	}
-	logger := initLogger(envconfig.EnvName(cfg.Env))
 
-	logger.Info("Starting user service", zap.String("env", string(cfg.Env)))
-	logger.Info("GRPC server internal port", zap.Int("port", int(cfg.Server.InternalPort)))
-
-	// Initialize Prometheus metrics
-	obs.Init()
-
-	// Start metrics server
-	if err := server.StartMetricsServer(constant.ServiceName, fmt.Sprintf(":%d", int(cfg.Server.MetricsPort)), logger); err != nil {
-		log.Fatalf("Error starting metrics server: %v", err)
+	telemetryConfig := obsconfig.TelemetryConfig{
+		Resource: obsconfig.ResourceConfig{
+			ServiceName:    constant.ServiceName,
+			Environment:    string(cfg.Env),
+			ServiceVersion: cfg.Version,
+		},
+		Logging: obsconfig.LoggingConfig{
+			Level: cfg.Obs.Logging.Level,
+		},
+		OTLP: obsconfig.OTLPConfig{
+			Endpoint: cfg.Obs.OTLP.Endpoint,
+			Insecure: true,
+		},
+		Tracing: obsconfig.TracingConfig{
+			SamplingRatio: cfg.Obs.Tracing.SamplingRatio,
+		},
 	}
 
 	// ------------------------------------------------------------------
@@ -56,11 +64,45 @@ func main() {
 	defer stop()
 
 	// ------------------------------------------------------------------
+	// Logger
+	// ------------------------------------------------------------------
+	logger, err := logging.New(logging.Config{
+		Service: telemetryConfig.Resource.ServiceName,
+		Env:     telemetryConfig.Resource.Environment,
+		Level:   telemetryConfig.Logging.Level,
+	})
+	if err != nil {
+		log.Fatalf("Error creating logger: %v", err)
+	}
+
+	logger.Info("Starting user service", zap.String("env", string(cfg.Env)))
+	logger.Info("GRPC server port", zap.Int("port", int(cfg.Server.GrpcPort)))
+
+	// Initialize Prometheus metrics
+	reg := obsmetrics.NewRegistry()
+	obsmetrics.RegisterGRPC(reg)
+	shutdownMetrics := obsmetrics.StartServer(fmt.Sprintf(":%d", int(cfg.Obs.Metrics.Port)), reg, logger)
+	if err != nil {
+		logger.Error("Error initializing Prometheus metrics server", zap.Error(err))
+	} else {
+		logger.Info("Prometheus metrics server initialized", zap.String("port", fmt.Sprintf(":%d", int(cfg.Obs.Metrics.Port))))
+	}
+	defer func() {
+		if err := shutdownMetrics(ctx); err != nil {
+			logger.Error("Error shutting down Prometheus metrics server", zap.Error(err))
+		}
+	}()
+
+	// ------------------------------------------------------------------
 	// OpenTelemetry (MUST be before creating grpcServer)
 	// ------------------------------------------------------------------
-	otelShutdown, err := obs.InitTracer(ctx, constant.ServiceName, cfg.OTEL.Endpoint)
+
+	// Initialize OpenTelemetry tracer
+	otelShutdown, err := obstracing.InitTracer(ctx, telemetryConfig)
 	if err != nil {
-		log.Fatalf("Error initializing OpenTelemetry tracer: %v", err)
+		logger.Error("Error initializing OpenTelemetry tracer", zap.Error(err))
+	} else {
+		logger.Info("OpenTelemetry tracer initialized", zap.String("endpoint", cfg.Obs.OTLP.Endpoint))
 	}
 	defer func() {
 		if err := otelShutdown(ctx); err != nil {
@@ -131,7 +173,7 @@ func main() {
 
 	userpb.RegisterUserServiceInternalServer(grpcServer, userImpl)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.InternalPort))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Server.GrpcPort))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
@@ -146,13 +188,4 @@ func main() {
 		log.Fatal(err)
 	}
 
-}
-
-func initLogger(env envconfig.EnvName) *zap.Logger {
-	switch env {
-	case envconfig.EnvDev, envconfig.EnvStaging:
-		return zap.Must(zap.NewDevelopment())
-	default:
-		return zap.Must(zap.NewProduction())
-	}
 }

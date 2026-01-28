@@ -18,18 +18,18 @@ const (
 // Config is the configuration for the application.
 type Config struct {
 	Env         EnvName
+	Version     string
 	Server      Server
 	Redis       Redis
 	JWT         JWT
 	Refresh     Refresh
 	UserGateway UserGateway
-	OTEL        OTEL
+	Obs         Obs
 }
 
 // Server is the configuration for the server.
 type Server struct {
-	PublicPort  Port
-	MetricsPort Port
+	HTTPPort Port
 }
 
 // UserGateway is the configuration for the user gateway.
@@ -64,7 +64,30 @@ type Refresh struct {
 	MaxAge   int
 }
 
-// OTEL is the configuration for the OpenTelemetry.
-type OTEL struct {
+// Obs is the configuration for the observability.
+type Obs struct {
+	Logging Logging
+	Metrics Metrics
+	Tracing Tracing
+	OTLP    OTLP
+}
+
+// Logging is the configuration for the logging.
+type Logging struct {
+	Level string
+}
+
+// Metrics is the configuration for the metrics.
+type Metrics struct {
+	Port Port
+}
+
+// Tracing is the configuration for the tracing.
+type Tracing struct {
+	SamplingRatio float64
+}
+
+// OTLP is the configuration for the OpenTelemetry.
+type OTLP struct {
 	Endpoint string
 }

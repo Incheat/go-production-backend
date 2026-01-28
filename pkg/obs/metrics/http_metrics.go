@@ -1,9 +1,6 @@
-// Package obs provides Prometheus metrics for the auth service.
-package obs
+package metrics
 
-import (
-	"github.com/prometheus/client_golang/prometheus"
-)
+import "github.com/prometheus/client_golang/prometheus"
 
 var (
 	// HTTPRequestsTotal is the total number of HTTP requests.
@@ -26,7 +23,7 @@ var (
 	)
 )
 
-// Init initializes the Prometheus metrics.
-func Init() {
-	prometheus.MustRegister(HTTPRequestsTotal, HTTPRequestDuration)
+// RegisterHTTP registers the HTTP metrics into the provided registry.
+func RegisterHTTP(reg prometheus.Registerer) {
+	reg.MustRegister(HTTPRequestsTotal, HTTPRequestDuration)
 }

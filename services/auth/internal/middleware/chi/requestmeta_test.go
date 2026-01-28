@@ -31,7 +31,6 @@ func TestRequestMeta_PopulatesContextFromHeaderAndRequest(t *testing.T) {
 	handler := RequestMeta()(next)
 
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
-	req.Header.Set(HeaderRequestID, "req-123")
 	req.Header.Set("User-Agent", "test-agent/1.0")
 	req.Header.Set("X-Forwarded-For", "203.0.113.10")
 

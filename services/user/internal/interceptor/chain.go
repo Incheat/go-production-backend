@@ -2,6 +2,8 @@
 package interceptor
 
 import (
+	"github.com/incheat/go-production-backend/pkg/obs/logging"
+	"github.com/incheat/go-production-backend/pkg/obs/metrics"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -12,8 +14,10 @@ func DefaultChain(
 ) []grpc.UnaryServerInterceptor {
 	return []grpc.UnaryServerInterceptor{
 		Recovery(),
-		ZapTraceUnaryInterceptor(logger),
-		Logging(logger),
-		PromMetrics(),
+		logging.GRPCRequestLogging(logger),
+		metrics.PromGRPCMetrics(),
+		// ZapTraceUnaryInterceptor(logger),
+		// Logging(logger),
+		// PromMetrics(),
 	}
 }

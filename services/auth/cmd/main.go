@@ -9,15 +9,17 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	obsconfig "github.com/incheat/go-production-backend/pkg/obs/config"
+	"github.com/incheat/go-production-backend/pkg/obs/logging"
+	obsmetrics "github.com/incheat/go-production-backend/pkg/obs/metrics"
+	obstracing "github.com/incheat/go-production-backend/pkg/obs/tracing"
 	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
 	envconfig "github.com/incheat/go-production-backend/services/auth/internal/config/env"
 	"github.com/incheat/go-production-backend/services/auth/internal/constant"
 	usergateway "github.com/incheat/go-production-backend/services/auth/internal/gateway/user/grpc"
 	authhandler "github.com/incheat/go-production-backend/services/auth/internal/handler/http"
 	chimiddleware "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi"
-	"github.com/incheat/go-production-backend/services/auth/internal/obs"
 	redisrepo "github.com/incheat/go-production-backend/services/auth/internal/repository/redis"
-	"github.com/incheat/go-production-backend/services/auth/internal/server"
 	authservice "github.com/incheat/go-production-backend/services/auth/internal/service/auth"
 	"github.com/incheat/go-production-backend/services/auth/internal/token"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
@@ -34,15 +36,44 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	logger := initLogger(cfg.Env)
+	telemetryConfig := obsconfig.TelemetryConfig{
+		Resource: obsconfig.ResourceConfig{
+			ServiceName:    constant.ServiceName,
+			Environment:    string(cfg.Env),
+			ServiceVersion: cfg.Version,
+		},
+		Logging: obsconfig.LoggingConfig{
+			Level: cfg.Obs.Logging.Level,
+		},
+		OTLP: obsconfig.OTLPConfig{
+			Endpoint: cfg.Obs.OTLP.Endpoint,
+			Insecure: true,
+		},
+		Tracing: obsconfig.TracingConfig{
+			SamplingRatio: cfg.Obs.Tracing.SamplingRatio,
+		},
+	}
+
+	logger, err := logging.New(logging.Config{
+		Service: telemetryConfig.Resource.ServiceName,
+		Env:     telemetryConfig.Resource.Environment,
+		Level:   telemetryConfig.Logging.Level,
+	})
+	if err != nil {
+		log.Fatalf("Error creating logger: %v", err)
+	}
 
 	logger.Info("Starting auth service", zap.String("env", string(cfg.Env)))
-	logger.Info("Http server port", zap.Int("port", int(cfg.Server.PublicPort)))
+	logger.Info("Http server port", zap.Int("port", int(cfg.Server.HTTPPort)))
 
 	ctx := context.Background()
-	otelShutdown, err := obs.InitTracer(ctx, constant.ServiceName, cfg.OTEL.Endpoint)
+
+	// Initialize OpenTelemetry tracer
+	otelShutdown, err := obstracing.InitTracer(ctx, telemetryConfig)
 	if err != nil {
-		log.Fatalf("Error initializing OpenTelemetry tracer: %v", err)
+		logger.Error("Error initializing OpenTelemetry tracer", zap.Error(err))
+	} else {
+		logger.Info("OpenTelemetry tracer initialized", zap.String("endpoint", cfg.Obs.OTLP.Endpoint))
 	}
 	defer func() {
 		if err := otelShutdown(ctx); err != nil {
@@ -51,12 +82,19 @@ func main() {
 	}()
 
 	// Initialize Prometheus metrics
-	obs.Init()
-
-	// Start metrics server
-	if err := server.StartMetricsServer(constant.ServiceName, fmt.Sprintf(":%d", int(cfg.Server.MetricsPort)), logger); err != nil {
-		log.Fatalf("Error starting metrics server: %v", err)
+	reg := obsmetrics.NewRegistry()
+	obsmetrics.RegisterHTTP(reg)
+	shutdownMetrics := obsmetrics.StartServer(fmt.Sprintf(":%d", int(cfg.Obs.Metrics.Port)), reg, logger)
+	if err != nil {
+		logger.Error("Error initializing Prometheus metrics server", zap.Error(err))
+	} else {
+		logger.Info("Prometheus metrics server initialized", zap.String("port", fmt.Sprintf(":%d", int(cfg.Obs.Metrics.Port))))
 	}
+	defer func() {
+		if err := shutdownMetrics(ctx); err != nil {
+			logger.Error("Error shutting down Prometheus metrics server", zap.Error(err))
+		}
+	}()
 
 	// Get OpenAPI definition from embedded spec
 	openAPISpec, err := servergen.GetSwagger()
@@ -138,16 +176,18 @@ func main() {
 	// ✅ Traced router
 	tracedRouter := chi.NewRouter()
 
+	tracedRouter.Use(obsmetrics.PromHTTPMetrics())
+
 	// HTTP API router
 	apiRouter := chi.NewRouter()
+	apiRouter.Use(chimiddleware.RequestMeta())
+	apiRouter.Use(logging.HTTPRequestLogging(logger))
 	apiRouter.Use(nethttpmiddleware.OapiRequestValidatorWithOptions(
 		openAPISpec,
 		chimiddleware.NewValidatorOptions(chimiddleware.ValidatorConfig{
 			ProdMode: cfg.Env == envconfig.EnvProd,
 		}),
 	))
-	apiRouter.Use(chimiddleware.RequestMeta())
-	apiRouter.Use(chimiddleware.ZapLogger(logger))
 	apiRouter.Use(chimiddleware.ZapRecovery(logger))
 
 	apiHandler := servergen.HandlerFromMux(strict, apiRouter)
@@ -161,7 +201,7 @@ func main() {
 
 	var g errgroup.Group
 
-	listenAddr := fmt.Sprintf(":%d", int(cfg.Server.PublicPort))
+	listenAddr := fmt.Sprintf(":%d", int(cfg.Server.HTTPPort))
 
 	srv := &http.Server{
 		Addr:    listenAddr,
@@ -178,11 +218,11 @@ func main() {
 
 }
 
-func initLogger(env envconfig.EnvName) *zap.Logger {
-	switch env {
-	case envconfig.EnvDev, envconfig.EnvStaging:
-		return zap.Must(zap.NewDevelopment())
-	default:
-		return zap.Must(zap.NewProduction())
-	}
-}
+// func initLogger(env envconfig.EnvName) *zap.Logger {
+// 	switch env {
+// 	case envconfig.EnvDev, envconfig.EnvStaging:
+// 		return zap.Must(zap.NewDevelopment())
+// 	default:
+// 		return zap.Must(zap.NewProduction())
+// 	}
+// }

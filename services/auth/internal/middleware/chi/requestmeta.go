@@ -8,17 +8,11 @@ import (
 	chimiddlewareutils "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi/utils"
 )
 
-const (
-	// HeaderRequestID is the header name for the request ID.
-	HeaderRequestID = "X-Request-ID"
-)
-
 // RequestMeta adds the request metadata to the context.
 func RequestMeta() func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			meta := chimiddlewareutils.RequestMeta{
-				RequestID: r.Header.Get(HeaderRequestID), // Envoy generated/inherited
 				UserAgent: r.UserAgent(),
 				IPAddress: getClientIP(r),
 			}

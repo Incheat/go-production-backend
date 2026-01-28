@@ -1,9 +1,7 @@
-// Package obs provides Prometheus metrics for the user service.
-package obs
+// Package metrics defines the gRPC metrics for the observability.
+package metrics
 
-import (
-	"github.com/prometheus/client_golang/prometheus"
-)
+import "github.com/prometheus/client_golang/prometheus"
 
 var (
 	// GrpcRequestsTotal is the total number of gRPC requests.
@@ -26,7 +24,7 @@ var (
 	)
 )
 
-// Init initializes the Prometheus metrics.
-func Init() {
-	prometheus.MustRegister(GrpcRequestsTotal, GrpcRequestDuration)
+// RegisterGRPC registers the gRPC metrics into the provided registry.
+func RegisterGRPC(reg prometheus.Registerer) {
+	reg.MustRegister(GrpcRequestsTotal, GrpcRequestDuration)
 }

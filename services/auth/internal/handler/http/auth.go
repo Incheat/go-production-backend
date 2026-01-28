@@ -5,14 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
+	"github.com/incheat/go-production-backend/pkg/obs/correlation"
 	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
 	"github.com/incheat/go-production-backend/services/auth/internal/constant"
 	chimiddlewareutils "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi/utils"
 	authservice "github.com/incheat/go-production-backend/services/auth/internal/service/auth"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // _ is a placeholder to ensure that Server implements the StrictServerInterface interface.
@@ -31,12 +30,14 @@ func New(service *authservice.Service) *Server {
 // Login is the server for the Login endpoint.
 func (h *Server) Login(ctx context.Context, request servergen.LoginRequestObject) (servergen.LoginResponseObject, error) {
 
-	sc := trace.SpanContextFromContext(ctx)
-	log.Printf("[Login] trace_id=%s span_id=%s valid=%v",
-		sc.TraceID().String(),
-		sc.SpanID().String(),
-		sc.IsValid(),
-	)
+	logger, ok := correlation.LoggerFromContext(ctx)
+	if !ok {
+		return servergen.Login500JSONResponse{
+			Error: "logger not found",
+		}, errors.New("logger not found")
+	}
+
+	logger.Info("Login request received")
 
 	tr := otel.Tracer("auth.handler")
 	ctx, span := tr.Start(ctx, "auth.login")

@@ -12,6 +12,6 @@ const (
 	ServiceName = "auth"
 	// SpanNameAuthHTTP is the name of the span for the auth HTTP server.
 	SpanNameAuthHTTP = "auth.http"
-	// DefaultOTELEndpoint is the default endpoint for the OpenTelemetry.
-	DefaultOTELEndpoint = "otel-collector:4317"
+	// DefaultOTLPEndpoint is the default endpoint for the OpenTelemetry.
+	DefaultOTLPEndpoint = "otel-collector:4317"
 )
