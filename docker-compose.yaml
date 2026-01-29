@@ -274,7 +274,7 @@ services:
       - obsnet
     ports:
       - "8081:18080"
-      - "19000:19000"
+      - "127.0.0.1:19000:19000"
     command:
       - -c
       - /etc/envoy/envoy.yaml
@@ -300,7 +300,8 @@ services:
       - authnet
       - obsnet
     ports:
-      - "19001:19000" # http://localhost:19001/stats/prometheus
+      - "127.0.0.1:6061:6060" # pprof
+      - "127.0.0.1:19001:19000" # http://localhost:19001/stats/prometheus
     command:
       - -c
       - /etc/envoy/envoy.yaml
@@ -345,7 +346,8 @@ services:
       - usernet
       - obsnet
     ports:
-      - "19002:19000" # http://localhost:19002/stats/prometheus
+      - "127.0.0.1:6062:6060" # pprof
+      - "127.0.0.1:19002:19000" # http://localhost:19002/stats/prometheus
     command:
       - -c
       - /etc/envoy/envoy.yaml

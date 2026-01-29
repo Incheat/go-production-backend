@@ -16,6 +16,7 @@ import (
 	obsconfig "github.com/incheat/go-production-backend/pkg/obs/config"
 	"github.com/incheat/go-production-backend/pkg/obs/logging"
 	obsmetrics "github.com/incheat/go-production-backend/pkg/obs/metrics"
+	"github.com/incheat/go-production-backend/pkg/obs/profiling"
 	obstracing "github.com/incheat/go-production-backend/pkg/obs/tracing"
 	envconfig "github.com/incheat/go-production-backend/services/user/internal/config/env"
 	"github.com/incheat/go-production-backend/services/user/internal/constant"
@@ -58,12 +59,6 @@ func main() {
 	}
 
 	// ------------------------------------------------------------------
-	// Context & signal
-	// ------------------------------------------------------------------
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	// ------------------------------------------------------------------
 	// Logger
 	// ------------------------------------------------------------------
 	logger, err := logging.New(logging.Config{
@@ -77,6 +72,15 @@ func main() {
 
 	logger.Info("Starting user service", zap.String("env", string(cfg.Env)))
 	logger.Info("GRPC server port", zap.Int("port", int(cfg.Server.GrpcPort)))
+
+	// ------------------------------------------------------------------
+	// Context & signal
+	// ------------------------------------------------------------------
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// Start profiling server
+	profiling.StartServer(ctx, fmt.Sprintf(":%d", int(cfg.Obs.Profiling.Port)), logger)
 
 	// Initialize Prometheus metrics
 	reg := obsmetrics.NewRegistry()

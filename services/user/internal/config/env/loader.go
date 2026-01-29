@@ -42,6 +42,10 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	userProfilingPort, err := getIntRequired("PROFILING_PORT")
+	if err != nil {
+		return nil, err
+	}
 	userMetricsPort, err := getIntRequired("PROM_METRICS_PORT")
 	if err != nil {
 		return nil, err
@@ -54,7 +58,8 @@ func Load() (*Config, error) {
 	otelEndpoint := getString("OTEL_ENDPOINT")
 
 	cfg := &Config{
-		Env: EnvName(env),
+		Env:     EnvName(env),
+		Version: userVersion,
 		Server: Server{
 			GrpcPort: Port(userGrpcPort),
 		},
@@ -68,6 +73,9 @@ func Load() (*Config, error) {
 			ConnMaxLifetime: userMySQLConnMaxLifetime,
 		},
 		Obs: Obs{
+			Profiling: Profiling{
+				Port: Port(userProfilingPort),
+			},
 			Logging: Logging{
 				Level: userLoggingLevel,
 			},

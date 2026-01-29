@@ -60,6 +60,10 @@ func Load() (*Config, error) {
 
 	authUserGatewayInternalAddress := getString("USER_GRPC_ADDR")
 
+	authProfilingPort, err := getIntRequired("PROFILING_PORT")
+	if err != nil {
+		return nil, err
+	}
 	authMetricsPort, err := getIntRequired("PROM_METRICS_PORT")
 	if err != nil {
 		return nil, err
@@ -99,6 +103,9 @@ func Load() (*Config, error) {
 			MaxAge:   authRefreshMaxAge,
 		},
 		Obs: Obs{
+			Profiling: Profiling{
+				Port: Port(authProfilingPort),
+			},
 			Logging: Logging{
 				Level: authLoggingLevel,
 			},

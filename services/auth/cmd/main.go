@@ -12,6 +12,7 @@ import (
 	obsconfig "github.com/incheat/go-production-backend/pkg/obs/config"
 	"github.com/incheat/go-production-backend/pkg/obs/logging"
 	obsmetrics "github.com/incheat/go-production-backend/pkg/obs/metrics"
+	"github.com/incheat/go-production-backend/pkg/obs/profiling"
 	obstracing "github.com/incheat/go-production-backend/pkg/obs/tracing"
 	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
 	envconfig "github.com/incheat/go-production-backend/services/auth/internal/config/env"
@@ -67,6 +68,9 @@ func main() {
 	logger.Info("Http server port", zap.Int("port", int(cfg.Server.HTTPPort)))
 
 	ctx := context.Background()
+
+	// Start profiling server
+	profiling.StartServer(ctx, fmt.Sprintf(":%d", int(cfg.Obs.Profiling.Port)), logger)
 
 	// Initialize OpenTelemetry tracer
 	otelShutdown, err := obstracing.InitTracer(ctx, telemetryConfig)

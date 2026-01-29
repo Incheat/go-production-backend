@@ -66,10 +66,16 @@ type Refresh struct {
 
 // Obs is the configuration for the observability.
 type Obs struct {
-	Logging Logging
-	Metrics Metrics
-	Tracing Tracing
-	OTLP    OTLP
+	Profiling Profiling
+	Logging   Logging
+	Metrics   Metrics
+	Tracing   Tracing
+	OTLP      OTLP
+}
+
+// Profiling is the configuration for the profiling.
+type Profiling struct {
+	Port Port
 }
 
 // Logging is the configuration for the logging.
