@@ -28,22 +28,22 @@ contract-first APIs, microservice boundaries, secure networking (mTLS), CI secur
 graph TD
   Client -->|HTTPS| Envoy
 
-  Envoy -->|HTTP (OpenAPI)| AuthSvc[auth service]
-  Envoy -->|HTTP (OpenAPI)| UserSvc[user service]
+  Envoy -->|HTTP (OpenAPI)| AuthSvc["auth service"]
+  Envoy -->|HTTP (OpenAPI)| UserSvc["user service"]
 
   AuthSvc -->|gRPC| UserSvc
 
   AuthSvc -->|Redis| Redis[(Redis)]
   UserSvc -->|MySQL| MySQL[(MySQL)]
 
-  subgraph Platform (infra/)
+  subgraph Platform["Platform (infra/)"]
     Envoy
-    OTel[OpenTelemetry Collector]
+    OTel["OpenTelemetry Collector"]
     Prometheus
     Grafana
     Loki
     Tempo
-    CA[step-ca / mTLS CA]
+    CA["step-ca / mTLS CA"]
   end
 ```
 
