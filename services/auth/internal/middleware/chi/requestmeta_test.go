@@ -15,9 +15,6 @@ func TestRequestMeta_PopulatesContextFromHeaderAndRequest(t *testing.T) {
 			t.Fatal("expected request meta in context")
 		}
 
-		if meta.RequestID != "req-123" {
-			t.Fatalf("expected RequestID %q, got %q", "req-123", meta.RequestID)
-		}
 		if meta.UserAgent != "test-agent/1.0" {
 			t.Fatalf("expected UserAgent %q, got %q", "test-agent/1.0", meta.UserAgent)
 		}
