@@ -1,297 +1,159 @@
 # go-production-backend
+
 [![codecov](https://codecov.io/gh/Incheat/go-production-backend/branch/main/graph/badge.svg)](https://codecov.io/gh/Incheat/go-production-backend)
 ![gosec](https://img.shields.io/badge/gosec-enabled-brightgreen)
 ![govulncheck](https://img.shields.io/badge/govulncheck-enabled-blue)
 
-A **production-oriented Go backend system** designed to demonstrate real-world engineering practices, architectural decision-making, and operational excellence.
+A **production-oriented Go backend monorepo** demonstrating *real-world* engineering practices:
+contract-first APIs, microservice boundaries, secure networking (mTLS), CI security scans, observability, and production-like local infrastructure.
 
-This repository is **not a toy project**.  
-It is built to reflect how modern backend systems are designed, implemented, tested, deployed, and operated in production environments.
-
----
-
-## 🎯 Project Goals
-
-- Demonstrate **end-to-end ownership**
-  - Requirement analysis → API design → implementation → CI/CD → observability
-- Apply **resilience engineering** principles
-- Design **high-QPS, production-ready endpoints**
-- Serve as a **reference backend architecture** for Go engineers
+> This repository is not a “toy project”. It’s meant to look and feel like a real system you can operate.
 
 ---
 
-## 🧱 Architecture Overview
+## 🎯 Project goals
 
-### High-Level Architecture
+- End-to-end ownership: design → implement → test → deploy → operate
+- Contract-first development (OpenAPI + gRPC)
+- Production-like local environment (proxy, mTLS, telemetry stack)
+- Practical reference architecture for Go backend engineers
+
+---
+
+## 🧱 Architecture overview
+
+### High-level architecture
 
 ```mermaid
 graph TD
-    Client -->|HTTP| BFF
-    BFF -->|gRPC| UserService
-    BFF -->|gRPC| OrderService
+  Client -->|HTTPS| Envoy
 
-    UserService --> Postgres
-    OrderService --> Postgres
-    UserService --> Redis
-    OrderService --> Redis
+  Envoy -->|HTTP (OpenAPI)| AuthSvc[auth service]
+  Envoy -->|HTTP (OpenAPI)| UserSvc[user service]
 
-    subgraph Infra
-        Envoy
-        Prometheus
-        Jaeger
-    end
+  AuthSvc -->|gRPC| UserSvc
+
+  AuthSvc -->|Redis| Redis[(Redis)]
+  UserSvc -->|MySQL| MySQL[(MySQL)]
+
+  subgraph Platform (infra/)
+    Envoy
+    OTel[OpenTelemetry Collector]
+    Prometheus
+    Grafana
+    Loki
+    Tempo
+    CA[step-ca / mTLS CA]
+  end
 ```
 
-### Why Microservices (Not a Monolith)?
-
-| Consideration | Decision |
-|--------------|----------|
-| Team scalability | Independent services |
-| Deployment | Isolated rollouts |
-| Fault isolation | Failure containment |
-| Technology evolution | Per-service flexibility |
-
-> Trade-off acknowledged: Microservices add operational complexity.  
-> This repo demonstrates *how to manage that complexity correctly*.
+Why this shape:
+- **Envoy is the platform edge**: CORS / rate limiting / retries / TLS/mTLS are handled at the proxy/platform layer, not sprinkled through app code.
+- **Auth ↔ User talks over gRPC** for internal service-to-service calls.
+- **User owns persistence** (MySQL + migrations/sqlc).
+- **Auth uses Redis** for refresh-token/session style storage.
+- **Observability is first-class** (metrics, logs, traces).
 
 ---
 
-## 🔍 Service Scope & Responsibility
-
-Each service follows **Single Responsibility Principle**:
+## 🔍 Services and responsibilities
 
 | Service | Responsibility |
-|-------|----------------|
-| BFF | API aggregation, auth, client-specific shaping |
-| User Service | User identity & profile |
-| Order Service | Order lifecycle |
+|---|---|
+| **auth** | Public auth HTTP API, token issuance (JWT + refresh), refresh token storage (Redis), calls user via gRPC |
+| **user** | User domain + persistence (MySQL), exposes internal gRPC + (optional/private) HTTP endpoints |
 
-Boundaries are defined by:
-- Business capability
-- Data ownership
-- Independent scaling needs
+### Service layering
 
----
+Each service follows a consistent layering to keep business logic transport-agnostic:
 
-## 🌐 API Design
-
-### API-First Development (OpenAPI)
-
-- OpenAPI (OAPI) is the **single source of truth**
-- Enables:
-  - Contract-first development
-  - Client/server code generation
-  - Backward compatibility guarantees
-
-
-### Why OpenAPI over Swagger UI?
-- OpenAPI is a **specification**
-- Swagger is primarily a **visualization tool**
-- API-first development requires the spec, not the UI
+- `handler/` — transport (HTTP/gRPC) layer
+- `service/` — business logic / use-cases
+- `repository/` — persistence (DB) + query layer
+- `gateway/` — integrations (e.g., other services)
+- `config/` — config wiring
 
 ---
 
-## 🚦 HTTP Layer
+## 🧩 Contract-first APIs (single source of truth)
 
-### Why Chi (Not Gin / Fiber / Echo)?
+All contracts live in `api/` and are treated as authoritative:
 
-| Framework | Trade-off |
-|---------|-----------|
-| Chi | Idiomatic Go, net/http compatible |
-| Gin | Faster prototyping, more magic |
-| Fiber | Fast, but non-standard |
-| Echo | Balanced but opinionated |
+- OpenAPI → HTTP APIs
+- Protobuf/gRPC → service-to-service APIs
 
-Chi was chosen because:
-- Minimal abstraction
-- Composable middleware
-- Production-friendly patterns
+Generated code must never be edited; services communicate via generated clients only.
 
 ---
 
-## 🔗 gRPC Layer
+## 🧱 Repo layout (what goes where)
 
-### Design Considerations
-
-- Versioning via package names
-- Backward compatibility enforced with proto checks
-- Interceptors for:
-  - Auth
-  - Logging
-  - Metrics
-  - Retry / Timeout
-
-### Envoy Responsibilities
-
-- mTLS
-- Rate limiting
-- Authentication
-- Retries
-- Metrics export
+- `api/` — OpenAPI + gRPC contracts (source of truth)
+- `services/` — deployable services (`auth`, `user`)
+- `pkg/obs/` — shared observability utilities (logging/metrics/tracing/correlation/otel)
+- `infra/` — platform runtime (Envoy, mTLS CA, telemetry stack)
+- `deploy/helm/` — Kubernetes charts
+- `make/` — modular make targets (oapi/grpc/sqlc/migrate/helm/security)
+- `test/` — integration + BDD + contract (Pact) tests
 
 ---
 
-## 🗄️ Data Layer
+## 🔐 Security model
 
-### Database Choice
-
-**PostgreSQL over MySQL**
-- Better concurrency model
-- Rich indexing
-- Strong consistency guarantees
-
-### Query Strategy
-
-| Tool | Reason |
-|----|----|
-| sqlc | Type-safe, explicit SQL |
-| GORM | Avoided due to N+1 risk |
-
----
-
-## ⚡ Cache & Session
-
-- Redis used for:
-  - Session storage
-  - Hot-path caching
-  - Idempotency keys
-
----
-
-## 🔐 Security Model
-
-- JWT (short-lived access)
-- Opaque tokens (refresh)
-- RBAC
-- Distributed session validation
-
----
-
-## 🧪 Testing Strategy
-
-### Test Pyramid
-
-```mermaid
-graph TD
-    Unit --> Integration --> Contract --> E2E
-```
-
-### Test Types
-
-| Type | Purpose |
-|----|----|
-| Unit | Business logic correctness |
-| Integration | DB, Redis, external deps |
-| Contract | gRPC proto compatibility |
-| Golden Tests | Stable gRPC responses |
-| E2E | Full system validation |
-| Acceptance | Specification by example(godog) |
-
-gRPC already acts as a contract — Pact tests are only needed across repos or teams.
-
----
-
-## 🧯 Resilience Mechanisms
-
-- Timeouts & retries
-- Circuit breakers
-- Backpressure
-- Graceful shutdown
-- Idempotency keys
+- JWT access tokens + refresh tokens (stored/managed via Auth service + Redis)
+- mTLS-ready platform (step-ca + cert generation/management)
+- CI security posture: `gosec`, `govulncheck` (and related checks as configured)
 
 ---
 
 ## 📊 Observability
 
-### OpenTelemetry-Based
+This repo treats observability as a product feature:
 
-- Logging (Zap/Zerolog)
-- Metrics (Prometheus)
-- Tracing (Jaeger)
+- Structured logging with correlation IDs
+- Metrics + tracing via OpenTelemetry
+- Platform stack: Prometheus + Grafana + Loki + Tempo (via `infra/`)
 
-### Logging Principles
-
-- Structured logs only
-- Required fields:
-  - trace_id
-  - request_id
-  - service
-  - environment
-  - version
-  - instance_id
+The goal is for debugging and performance analysis to be possible from day one.
 
 ---
 
-## 🔄 CI/CD Pipeline
+## 🧪 Testing strategy
 
-```mermaid
-graph LR
-    Commit --> Lint
-    Lint --> Test
-    Test --> Build
-    Build --> Docker
-    Docker --> Deploy
-```
+This repository supports multiple testing styles:
 
-### Tooling
-
-- Pre-commit hooks
-- Docker Compose (local)
-- Kubernetes + Helm
-- Proto compatibility checks
+- Unit tests for pure logic
+- Integration tests for DB/redis/service boundaries
+- Contract tests (Pact) to lock consumer/provider expectations
 
 ---
 
-## ▶️ Running Locally
+## ▶️ Running locally
 
 ### Prerequisites
 
-- Go ≥ 1.22
+- Go **1.22+**
 - Docker & Docker Compose
 
-### Start Everything
+### Start the full stack (recommended)
 
 ```bash
 docker-compose up --build
 ```
 
-### Run Services Locally
-
-```bash
-make run
-```
+This brings up **services + infra** (gateway, telemetry, backing services) so local behaves like production.
 
 ---
 
-## 📚 Topics Covered
+## 🧭 Engineering conventions
 
-- Readiness / Liveness / Startup probes
-- Scale up vs scale out
-- Event-driven architecture
-- CAP trade-offs
-- pprof & concurrency debugging
-- Incident response & postmortems
-- Design docs & runbooks
-
----
-
-## 🧠 Philosophy
-
-This project emphasizes:
-- Explicit design decisions
-- Failure-mode thinking
-- Production-first engineering
-- Clear trade-offs, not dogma
+- Conventional commits
+- Structured branch naming
+- Consistent naming rules (packages, files, identifiers)
+- Code generation & migrations via `make/` targets
 
 ---
 
 ## 📌 Status
 
-🚧 Actively evolving  
-📖 Designed as a learning & interview reference
-
----
-
-## 📜 License
-
-MIT
+🚧 **Actively evolving** (recent infra/observability work is ongoing).
