@@ -1,3 +1,4 @@
+// Package chimiddlewareutils defines the request metadata for the chi middleware.
 package chimiddlewareutils
 
 import "context"

@@ -15,14 +15,16 @@ const (
 
 // Config is the configuration for the application.
 type Config struct {
-	Env    EnvName
-	Server Server
-	MySQL  MySQL
+	Env     EnvName
+	Version string
+	Server  Server
+	MySQL   MySQL
+	Obs     Obs
 }
 
 // Server is the configuration for the server.
 type Server struct {
-	InternalPort Port
+	GrpcPort Port
 }
 
 // Port is the port for the server.
@@ -37,4 +39,38 @@ type MySQL struct {
 	MaxOpenConns    int
 	MaxIdleConns    int
 	ConnMaxLifetime int // seconds
+}
+
+// Obs is the configuration for the observability.
+type Obs struct {
+	Profiling Profiling
+	Logging   Logging
+	Metrics   Metrics
+	Tracing   Tracing
+	OTLP      OTLP
+}
+
+// Profiling is the configuration for the profiling.
+type Profiling struct {
+	Port Port
+}
+
+// Logging is the configuration for the logging.
+type Logging struct {
+	Level string
+}
+
+// Metrics is the configuration for the metrics.
+type Metrics struct {
+	Port Port
+}
+
+// Tracing is the configuration for the tracing.
+type Tracing struct {
+	SamplingRatio float64
+}
+
+// OTLP is the configuration for the OpenTelemetry.
+type OTLP struct {
+	Endpoint string
 }

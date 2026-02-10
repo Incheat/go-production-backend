@@ -1,0 +1,22 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["prometheus:9090"]
+
+  - job_name: "envoy"
+    metrics_path: /stats/prometheus
+    static_configs:
+      - targets:
+          - "auth-envoy:19000"
+          - "user-envoy:19000"
+          - "ingress-envoy:19000"
+
+  - job_name: "app-metrics-via-envoy"
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "auth-envoy:18090"
+          - "user-envoy:18090"

@@ -1,8 +1,10 @@
 receivers:
   otlp:
     protocols:
-      grpc: {}
-      http: {}
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
 
   zipkin:
     endpoint: 0.0.0.0:9411
@@ -13,16 +15,24 @@ processors:
 exporters:
   debug:
     verbosity: detailed
-  otlp:
+  otlp/tempo:
     endpoint: tempo:4317
     tls:
       insecure: true
   # otlphttp/tempo:
   #   endpoint: http://tempo:4318
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
 
 service:
   pipelines:
     traces:
       receivers: [otlp, zipkin]
       processors: [batch]
-      exporters: [debug, otlp]
+      exporters: [debug, otlp/tempo]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, otlphttp/loki]

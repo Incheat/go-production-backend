@@ -15,7 +15,12 @@ var errMissingEnv = errors.New("missing env var")
 func Load() (*Config, error) {
 	env := getString("ENV") // if missing, it will be ""
 
-	userInternalPort, err := getIntRequired("USER_INTERNAL_PORT")
+	userVersion := getString("USER_VERSION")
+	if userVersion == "" {
+		return nil, fmt.Errorf("USER_VERSION: %w", errMissingEnv)
+	}
+
+	userGrpcPort, err := getIntRequired("USER_GRPC_PORT")
 	if err != nil {
 		return nil, err
 	}
@@ -37,10 +42,26 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+	userProfilingPort, err := getIntRequired("PROFILING_PORT")
+	if err != nil {
+		return nil, err
+	}
+	userMetricsPort, err := getIntRequired("PROM_METRICS_PORT")
+	if err != nil {
+		return nil, err
+	}
+	userLoggingLevel := getString("USER_LOGGING_LEVEL")
+	userTracingSamplingRatio, err := getFloat64Required("USER_TRACING_SAMPLING_RATIO")
+	if err != nil {
+		return nil, err
+	}
+	otelEndpoint := getString("OTEL_ENDPOINT")
+
 	cfg := &Config{
-		Env: EnvName(env),
+		Env:     EnvName(env),
+		Version: userVersion,
 		Server: Server{
-			InternalPort: Port(userInternalPort),
+			GrpcPort: Port(userGrpcPort),
 		},
 		MySQL: MySQL{
 			Host:            userMySQLHost,
@@ -50,6 +71,23 @@ func Load() (*Config, error) {
 			MaxOpenConns:    userMySQLMaxOpenConns,
 			MaxIdleConns:    userMySQLMaxIdleConns,
 			ConnMaxLifetime: userMySQLConnMaxLifetime,
+		},
+		Obs: Obs{
+			Profiling: Profiling{
+				Port: Port(userProfilingPort),
+			},
+			Logging: Logging{
+				Level: userLoggingLevel,
+			},
+			Metrics: Metrics{
+				Port: Port(userMetricsPort),
+			},
+			Tracing: Tracing{
+				SamplingRatio: userTracingSamplingRatio,
+			},
+			OTLP: OTLP{
+				Endpoint: otelEndpoint,
+			},
 		},
 	}
 
@@ -77,8 +115,20 @@ func getIntRequired(name string) (int, error) {
 	return v, nil
 }
 
+func getFloat64Required(name string) (float64, error) {
+	raw := getString(name)
+	if raw == "" {
+		return 0, fmt.Errorf("%s: %w", name, errMissingEnv)
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", name, err)
+	}
+	return v, nil
+}
+
 func validate(cfg *Config) error {
-	if cfg.Server.InternalPort <= 0 || cfg.Server.InternalPort > 65535 {
+	if cfg.Server.GrpcPort <= 0 || cfg.Server.GrpcPort > 65535 {
 		return fmt.Errorf("USER_PUBLIC_PORT: must be between 1 and 65535")
 	}
 

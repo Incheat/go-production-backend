@@ -1,0 +1,73 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+
+    # Only collect containers with obs.logs=true label
+    relabel_configs:
+      - source_labels: [__meta_docker_container_label_obs_logs]
+        regex: "true"
+        action: keep
+
+      # container = real container name (for debug)
+      - source_labels: [__meta_docker_container_name]
+        regex: "/(.*)"
+        target_label: container
+
+      # unified service_name (use regex to match all variable names)
+      - source_labels: [__meta_docker_container_name]
+        regex: "/.*auth.*"
+        target_label: service_name
+        replacement: "auth"
+
+      - source_labels: [__meta_docker_container_name]
+        regex: "/.*user.*"
+        target_label: service_name
+        replacement: "user"
+
+      - source_labels: [__meta_docker_container_name]
+        regex: "/.*ingress.*envoy.*|/ingress-envoy"
+        target_label: service_name
+        replacement: "ingress"
+
+      # (optional) you can also classify envoy into the same service_name
+      - source_labels: [__meta_docker_container_name]
+        regex: "/.*auth.*envoy.*"
+        target_label: service_name
+        replacement: "auth"
+
+      - source_labels: [__meta_docker_container_name]
+        regex: "/.*user.*envoy.*"
+        target_label: service_name
+        replacement: "user"
+
+      # if no service_name matches, drop it (to avoid missing logs)
+      - source_labels: [service_name]
+        regex: ""
+        action: drop
+
+    pipeline_stages:
+      # Docker json log unwrap one layer (get the actual message line)
+      - docker: {}
+
+      # If your app/zap or envoy access log is JSON, try to unwrap one more layer (if it doesn't work, it won't break)
+      - json:
+          expressions:
+            trace_id: trace_id
+            level: level
+            msg: msg
+
+      - labels:
+          service:
+          level:

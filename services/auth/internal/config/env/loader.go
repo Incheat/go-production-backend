@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/incheat/go-production-backend/services/auth/internal/constant"
 )
 
 // errMissingEnv is the error returned when a required environment variable is missing.
@@ -16,7 +18,11 @@ var errMissingEnv = errors.New("missing env var")
 func Load() (*Config, error) {
 	env := getString("ENV") // if missing, it will be ""
 
-	authPublicPort, err := getIntRequired("AUTH_PUBLIC_PORT")
+	authVersion := getString("AUTH_VERSION")
+	if authVersion == "" {
+		return nil, fmt.Errorf("AUTH_VERSION: %w", errMissingEnv)
+	}
+	authHTTPPort, err := getIntRequired("AUTH_HTTP_PORT")
 	if err != nil {
 		return nil, err
 	}
@@ -33,6 +39,9 @@ func Load() (*Config, error) {
 	authJWTIssuer := getString("AUTH_JWT_ISSUER")
 	authJWTAudience := getString("AUTH_JWT_AUDIENCE")
 	authJWKSPath := getString("AUTH_JWT_JWKS_PATH")
+	if authJWKSPath == "" {
+		authJWKSPath = constant.JWKSPath
+	}
 	authJWTExpireRaw, err := getIntRequired("AUTH_JWT_EXPIRE")
 	if err != nil {
 		return nil, err
@@ -51,10 +60,26 @@ func Load() (*Config, error) {
 
 	authUserGatewayInternalAddress := getString("USER_GRPC_ADDR")
 
+	authProfilingPort, err := getIntRequired("PROFILING_PORT")
+	if err != nil {
+		return nil, err
+	}
+	authMetricsPort, err := getIntRequired("PROM_METRICS_PORT")
+	if err != nil {
+		return nil, err
+	}
+	authLoggingLevel := getString("AUTH_LOGGING_LEVEL")
+	authTracingSamplingRatio, err := getFloat64Required("AUTH_TRACING_SAMPLING_RATIO")
+	if err != nil {
+		return nil, err
+	}
+	otlpEndpoint := getString("OTLP_ENDPOINT")
+
 	cfg := &Config{
-		Env: EnvName(env),
+		Env:     EnvName(env),
+		Version: authVersion,
 		Server: Server{
-			PublicPort: Port(authPublicPort),
+			HTTPPort: Port(authHTTPPort),
 		},
 		UserGateway: UserGateway{
 			InternalAddress: authUserGatewayInternalAddress,
@@ -76,6 +101,23 @@ func Load() (*Config, error) {
 			NumBytes: authRefreshNumBytes,
 			EndPoint: authRefreshEndPoint,
 			MaxAge:   authRefreshMaxAge,
+		},
+		Obs: Obs{
+			Profiling: Profiling{
+				Port: Port(authProfilingPort),
+			},
+			Logging: Logging{
+				Level: authLoggingLevel,
+			},
+			Metrics: Metrics{
+				Port: Port(authMetricsPort),
+			},
+			Tracing: Tracing{
+				SamplingRatio: authTracingSamplingRatio,
+			},
+			OTLP: OTLP{
+				Endpoint: otlpEndpoint,
+			},
 		},
 	}
 
@@ -103,8 +145,20 @@ func getIntRequired(name string) (int, error) {
 	return v, nil
 }
 
+func getFloat64Required(name string) (float64, error) {
+	raw := getString(name)
+	if raw == "" {
+		return 0, fmt.Errorf("%s: %w", name, errMissingEnv)
+	}
+	v, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", name, err)
+	}
+	return v, nil
+}
+
 func validate(cfg *Config) error {
-	if cfg.Server.PublicPort <= 0 || cfg.Server.PublicPort > 65535 {
+	if cfg.Server.HTTPPort <= 0 || cfg.Server.HTTPPort > 65535 {
 		return fmt.Errorf("AUTH_HTTP_PORT: must be between 1 and 65535")
 	}
 

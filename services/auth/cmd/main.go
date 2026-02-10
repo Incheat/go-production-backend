@@ -9,8 +9,14 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	obsconfig "github.com/incheat/go-production-backend/pkg/obs/config"
+	"github.com/incheat/go-production-backend/pkg/obs/logging"
+	obsmetrics "github.com/incheat/go-production-backend/pkg/obs/metrics"
+	"github.com/incheat/go-production-backend/pkg/obs/profiling"
+	obstracing "github.com/incheat/go-production-backend/pkg/obs/tracing"
 	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
 	envconfig "github.com/incheat/go-production-backend/services/auth/internal/config/env"
+	"github.com/incheat/go-production-backend/services/auth/internal/constant"
 	usergateway "github.com/incheat/go-production-backend/services/auth/internal/gateway/user/grpc"
 	authhandler "github.com/incheat/go-production-backend/services/auth/internal/handler/http"
 	chimiddleware "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi"
@@ -19,6 +25,7 @@ import (
 	"github.com/incheat/go-production-backend/services/auth/internal/token"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -30,10 +37,68 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	logger := initLogger(cfg.Env)
+	telemetryConfig := obsconfig.TelemetryConfig{
+		Resource: obsconfig.ResourceConfig{
+			ServiceName:    constant.ServiceName,
+			Environment:    string(cfg.Env),
+			ServiceVersion: cfg.Version,
+		},
+		Logging: obsconfig.LoggingConfig{
+			Level: cfg.Obs.Logging.Level,
+		},
+		OTLP: obsconfig.OTLPConfig{
+			Endpoint: cfg.Obs.OTLP.Endpoint,
+			Insecure: true,
+		},
+		Tracing: obsconfig.TracingConfig{
+			SamplingRatio: cfg.Obs.Tracing.SamplingRatio,
+		},
+	}
+
+	logger, err := logging.New(logging.Config{
+		Service: telemetryConfig.Resource.ServiceName,
+		Env:     telemetryConfig.Resource.Environment,
+		Level:   telemetryConfig.Logging.Level,
+	})
+	if err != nil {
+		log.Fatalf("Error creating logger: %v", err)
+	}
 
 	logger.Info("Starting auth service", zap.String("env", string(cfg.Env)))
-	logger.Info("Http server port", zap.Int("port", int(cfg.Server.PublicPort)))
+	logger.Info("Http server port", zap.Int("port", int(cfg.Server.HTTPPort)))
+
+	ctx := context.Background()
+
+	// Start profiling server
+	profiling.StartServer(ctx, fmt.Sprintf(":%d", int(cfg.Obs.Profiling.Port)), logger)
+
+	// Initialize OpenTelemetry tracer
+	otelShutdown, err := obstracing.InitTracer(ctx, telemetryConfig)
+	if err != nil {
+		logger.Error("Error initializing OpenTelemetry tracer", zap.Error(err))
+	} else {
+		logger.Info("OpenTelemetry tracer initialized", zap.String("endpoint", cfg.Obs.OTLP.Endpoint))
+	}
+	defer func() {
+		if err := otelShutdown(ctx); err != nil {
+			logger.Error("Error shutting down OpenTelemetry tracer", zap.Error(err))
+		}
+	}()
+
+	// Initialize Prometheus metrics
+	reg := obsmetrics.NewRegistry()
+	obsmetrics.RegisterHTTP(reg)
+	shutdownMetrics := obsmetrics.StartServer(fmt.Sprintf(":%d", int(cfg.Obs.Metrics.Port)), reg, logger)
+	if err != nil {
+		logger.Error("Error initializing Prometheus metrics server", zap.Error(err))
+	} else {
+		logger.Info("Prometheus metrics server initialized", zap.String("port", fmt.Sprintf(":%d", int(cfg.Obs.Metrics.Port))))
+	}
+	defer func() {
+		if err := shutdownMetrics(ctx); err != nil {
+			logger.Error("Error shutting down Prometheus metrics server", zap.Error(err))
+		}
+	}()
 
 	// Get OpenAPI definition from embedded spec
 	openAPISpec, err := servergen.GetSwagger()
@@ -48,7 +113,6 @@ func main() {
 		DB:       cfg.Redis.DB,
 	})
 
-	ctx := context.Background()
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		panic(fmt.Errorf("failed to connect to Redis: %w", err))
 	}
@@ -109,30 +173,47 @@ func main() {
 	// ✅ JWKS endpoint (NOT behind OpenAPI validator)
 	jwksPath := cfg.JWT.JWKSPath
 	if jwksPath == "" {
-		jwksPath = "/.well-known/jwks.json"
+		jwksPath = constant.JWKSPath
 	}
 	rootRouter.Get(jwksPath, jwtTokenMaker.JWKSHandler)
 
+	// ✅ Traced router
+	tracedRouter := chi.NewRouter()
+
+	tracedRouter.Use(obsmetrics.PromHTTPMetrics())
+
 	// HTTP API router
 	apiRouter := chi.NewRouter()
+	apiRouter.Use(chimiddleware.RequestMeta())
+	apiRouter.Use(logging.HTTPRequestLogging(logger))
 	apiRouter.Use(nethttpmiddleware.OapiRequestValidatorWithOptions(
 		openAPISpec,
 		chimiddleware.NewValidatorOptions(chimiddleware.ValidatorConfig{
 			ProdMode: cfg.Env == envconfig.EnvProd,
 		}),
 	))
-	apiRouter.Use(chimiddleware.RequestMeta())
-	apiRouter.Use(chimiddleware.ZapLogger(logger))
 	apiRouter.Use(chimiddleware.ZapRecovery(logger))
 
 	apiHandler := servergen.HandlerFromMux(strict, apiRouter)
 
-	rootRouter.Mount("/", apiHandler)
+	tracedRouter.Mount("/", apiHandler)
+
+	rootRouter.Mount("/", otelhttp.NewHandler(
+		tracedRouter,
+		constant.SpanNameAuthHTTP,
+	))
 
 	var g errgroup.Group
 
+	listenAddr := fmt.Sprintf(":%d", int(cfg.Server.HTTPPort))
+
+	srv := &http.Server{
+		Addr:    listenAddr,
+		Handler: rootRouter,
+	}
+
 	g.Go(func() error {
-		return http.ListenAndServe(fmt.Sprintf(":%d", int(cfg.Server.PublicPort)), rootRouter)
+		return srv.ListenAndServe()
 	})
 
 	if err := g.Wait(); err != nil {
@@ -141,11 +222,11 @@ func main() {
 
 }
 
-func initLogger(env envconfig.EnvName) *zap.Logger {
-	switch env {
-	case envconfig.EnvDev, envconfig.EnvStaging:
-		return zap.Must(zap.NewDevelopment())
-	default:
-		return zap.Must(zap.NewProduction())
-	}
-}
+// func initLogger(env envconfig.EnvName) *zap.Logger {
+// 	switch env {
+// 	case envconfig.EnvDev, envconfig.EnvStaging:
+// 		return zap.Must(zap.NewDevelopment())
+// 	default:
+// 		return zap.Must(zap.NewProduction())
+// 	}
+// }

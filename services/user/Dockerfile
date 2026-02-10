@@ -18,6 +18,7 @@ RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
 # Copy source
 COPY services/ ./services/
 COPY api/ ./api/
+COPY pkg/ ./pkg/
 
 # Build (repro / CI-friendly)
 RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
