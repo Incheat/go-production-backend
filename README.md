@@ -28,15 +28,15 @@ contract-first APIs, microservice boundaries, secure networking (mTLS), CI secur
 graph TD
   Client -->|HTTPS| Envoy
 
-  Envoy -->|HTTP (OpenAPI)| AuthSvc["auth service"]
-  Envoy -->|HTTP (OpenAPI)| UserSvc["user service"]
+  Envoy -->|HTTP OpenAPI| AuthSvc["auth service"]
+  Envoy -->|HTTP OpenAPI| UserSvc["user service"]
 
   AuthSvc -->|gRPC| UserSvc
 
   AuthSvc -->|Redis| Redis[(Redis)]
   UserSvc -->|MySQL| MySQL[(MySQL)]
 
-  subgraph Platform["Platform (infra/)"]
+  subgraph Platform["Platform (infra)"]
     Envoy
     OTel["OpenTelemetry Collector"]
     Prometheus
