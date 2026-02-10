@@ -1,6 +1,7 @@
 # Project Structure Guide
 
-This guide describes a clean, scalable directory structure for Go applications—supporting multiple services, OpenAPI integration, shared utilities, migrations, testing, and development tooling.
+This guide describes the directory structure of this Go monorepo.  
+It supports multiple services, contract‑first APIs (OpenAPI + gRPC), observability, secure networking (mTLS), Kubernetes deployment, and multiple testing strategies.
 
 ---
 
@@ -8,79 +9,67 @@ This guide describes a clean, scalable directory structure for Go applications�
 
 ```
 /project-root
-│── api/                # OpenAPI specs (source of truth)
-│   └── helloworld/
-│       └── oapi 
-│         ├── internal.yaml # API definition for internal
-│         ├── public.yaml   # API definition for public
-│         ├── internal.client.yaml 
-│         ├── internal.server.yaml 
-│         ├── internal.type.yaml 
-│         └── gen/
-│             ├── client.gen.go
-│             └── type/
-│                 └── types.gen.go
+│── api/                      # API contracts (source of truth)
+│   ├── auth/oapi             # Public HTTP API
+│   └── user/
+│       ├── grpc              # Internal service communication
+│       └── oapi              # Private HTTP API
 │
-│── config/              # Configuration files and environment settings
-│    └── config.yaml
+│── services/                 # Deployable microservices
+│   ├── auth/
+│   │   ├── cmd/              # Application entrypoint
+│   │   ├── internal/
+│   │   │   ├── handler/      # HTTP transport layer
+│   │   │   ├── service/      # Business logic
+│   │   │   ├── repository/   # Data access (memory/redis)
+│   │   │   ├── gateway/      # Calls to other services (gRPC clients)
+│   │   │   ├── middleware/   # HTTP middleware
+│   │   │   ├── config/       # Runtime configuration
+│   │   │   ├── token/        # JWT & opaque tokens
+│   │   │   └── api/          # Generated OpenAPI server interfaces
+│   │   └── pkg/model/        # Service-owned domain models
+│   │
+│   └── user/
+│       ├── cmd/
+│       ├── internal/
+│       │   ├── handler/      # HTTP + gRPC endpoints
+│       │   ├── service/      # Business logic
+│       │   ├── repository/   # MySQL persistence
+│       │   ├── interceptor/  # gRPC interceptors
+│       │   ├── db/           # sqlc generated code
+│       │   └── api/          # Generated OpenAPI server
+│       ├── db/mysql/
+│       │   ├── migrations/   # Database schema migrations
+│       │   └── sqlc.yaml     # Query generation
+│       └── pkg/model/
 │
-│── services/             # Each service has its own isolated structure
-│    └── {service_name}/
-│         ├── cmd/
-│         │     └── main.go
-│         ├── internal/
-│         │     ├── api/             # OpenAPI-generated server interfaces
-│         │     │   ├── oapi/         
-│         │     │   │   └── gen/    # oapi-codegen output (ignored by git)
-│         │     │   │       ├── public/
-│         │     │   │       │   └── server/
-│         │     │   │       │       └── api_gen.go
-│         │     │   │       └── private/
-│         │     │   │           └── server/
-│         │     │   │               └── api_gen.go
-│         │     │   └── router.go    # glue between generated interfaces and handlers
-│         │     ├── db/
-│         │     │   └── mysql/
-│         │     │       └── gen/
-│         │     │           └── db.go
-│         │     ├── config/
-│         │     │   ├── config.go    # your Config struct
-│         │     │   └── loader.go    # your Load / MustLoad
-│         │     ├── service(controller)/      # Business logic / domain controllers
-│         │     ├── gateway/     
-│         │     ├── handler/  # API handlers or StrictServerInterface implementation for (HTTP, gRPC)
-│         │     ├── security/        # Auth, RBAC, middleware
-│         │     ├── repository/      # Database & Redis implementations
-│         │     └── test/      
-│         │         └── provider/    # auth_provider_pact_test.go # verifies pact files from all consumer in one provider test
-│         ├── db/
-│         │   └── mysql/
-│         │       ├── migrations/
-│         │       │   ├── 0001_init.up.sql
-│         │       │   └── 0001_init.down.sql
-│         │       ├── query.sql
-│         │       └── sqlc.yaml
-│         └── config/                # YAML files, mounted in Docker, etc.
-│             ├── config.yaml
-│             ├── config.dev.yaml
-│             └── config.prod.yaml
-│── internal/            # Shared utilities (logger, middleware, helpers)
+│── pkg/                      # Shared reusable libraries
+│   └── obs/                  # Observability platform
+│       ├── logging/
+│       ├── metrics/
+│       ├── tracing/
+│       ├── correlation/
+│       └── otel/
 │
-│── deploy/             # CI/CD scripts, build automation, deploy tooling, helm
+│── infra/                    # Runtime platform infrastructure
+│   ├── envoy/                # Service mesh & gateway config
+│   ├── obs/                  # Prometheus, Grafana, Loki, Tempo
+│   └── security/             # mTLS certificates & CA
 │
-│── test/                # Integration, contract, and BDD test structure
-│    ├── pacts/           # Consumer/provider contract tests
-│    │   └── consumer/
-│    │       └── auth/
-│    │           ├── auth_member_pact_test.go # consumer_provider_pact_test.go, contains all internal api provided by member 
-│    │           └── pacts/
-│    │               └── auth-member.json   # generated pact file
-│    ├── features/       # Gherkin feature files
-│    ├── steps/          # Step definitions for Godog
-│    └── testutils/      # Shared test data, fixtures, helpers
-│── Makefile             # Build shortcuts and developer tasks
-│── README.md            # Project overview and instructions
-│── docker-compose.yaml  # Local dev environment setup
+│── deploy/helm/              # Kubernetes deployment charts
+│
+│── make/                     # Modular Makefile system
+│   ├── oapi.mk
+│   ├── grpc.mk
+│   ├── sqlc.mk
+│   ├── migrate.mk
+│   ├── helm.mk
+│   └── security.mk
+│
+│── docs/                     # Engineering documentation
+│── test/                     # Integration, BDD, and contract tests
+│── docker-compose.yaml       # Local development environment
+│── Makefile
 │── go.mod
 └── go.sum
 ```
@@ -89,47 +78,114 @@ This guide describes a clean, scalable directory structure for Go applications�
 
 ## Structure Philosophy
 
-### **cmd/**
+### **api/**
 
-Contains the entry points for your top-level executables. Each folder represents a binary.
+Contains all API contracts.  
+This is the source of truth — implementations must conform to these definitions.
 
-### **config/**
+Rules:
 
-Stores static configuration files such as YAML, JSON, or environment presets.
+* OpenAPI → HTTP APIs
+* gRPC → service‑to‑service APIs
+* Generated code must never be edited
+* Services communicate through generated clients only
+
+---
 
 ### **services/**
 
-Each service is self-contained and follows a mini clean architecture layout. This helps when scaling to multiple microservices while sharing common patterns.
+Each service is independently deployable and internally layered.
+
+Layers:
+
+| Layer | Responsibility |
+|------|------|
+| handler | Transport (HTTP/gRPC) |
+| service | Business logic |
+| repository | Storage |
+| gateway | External service calls |
+| config | Runtime configuration |
+
+This separation keeps business logic independent of transport and storage.
+
+---
 
 ### **pkg/**
 
-Contains libraries intended to be reusable across the entire project or externally. Anything placed here must be safe for reuse.
+Reusable libraries shared across services.
 
-### **migrations/**
+Currently contains the observability platform:
 
-All database schema changes belong here. Works with common migration tools.
+* structured logging
+* distributed tracing
+* metrics
+* correlation context
 
-### **scripts/**
+Anything here must be safe for reuse.
 
-Automates tasks such as CI pipelines, code generation, dev setup, and deployment workflows.
+---
+
+### **infra/**
+
+Represents the runtime environment required for production‑like execution locally.
+
+Includes:
+
+* Envoy proxy
+* mTLS certificate authority
+* Prometheus / Grafana / Loki / Tempo
+* OpenTelemetry collector
+
+The goal is to make local behavior match production behavior.
+
+---
+
+### **deploy/**
+
+Helm charts used for Kubernetes deployment.
+
+All services and infrastructure are deployable together as a single platform.
+
+---
+
+### **make/**
+
+Modular build system. Each file manages a specific concern.
+
+| File | Purpose |
+|----|----|
+| oapi.mk | Generate OpenAPI code |
+| grpc.mk | Generate protobuf |
+| sqlc.mk | Generate DB queries |
+| migrate.mk | Run migrations |
+| helm.mk | Kubernetes deploy |
+| security.mk | Certificates |
+
+---
 
 ### **test/**
 
-A comprehensive testing layout supporting:
+Supports multiple testing approaches:
 
-* BDD (Godog)
-* Contract tests (Pact)
-* Shared testing utilities
+* BDD (Gherkin features)
+* Consumer contract tests (Pact)
+* Provider verification
+* Cross‑service integration
+
+The repository prioritizes verifying service interaction correctness.
 
 ---
 
 ## Best Practices
 
-* Keep business logic out of `cmd/`—place it in `internal/`.
-* Never import from another service’s `internal/` directory.
-* Keep `pkg/` small—only place code intended for reuse.
-* Store all API definitions and generated code alongside each service.
-* Maintain a clear separation between handlers, controllers, and repositories.
-* Use Makefile targets to standardize builds and common tasks.
+* Do not import another service’s internal package
+* Never modify generated code
+* Keep business logic inside `service/`
+* Handlers only translate transport ↔ domain
+* Repositories must not contain business logic
+* Inter‑service communication only through contracts
+* If production requires infrastructure, run it locally too
 
-This structure ensures scalability, modularity, testability, and team-friendly workflows.
+---
+
+This structure prioritizes scalability, safety, and integration stability across services.
