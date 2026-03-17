@@ -137,7 +137,7 @@ func main() {
 
 	// Initialize MySQL connection
 	dbDSN := fmt.Sprintf("%s:%s@tcp(%s)/%s?parseTime=true", cfg.MySQL.User, cfg.MySQL.Password, cfg.MySQL.Host, cfg.MySQL.DBName)
-	logger.Info("Initializing MySQL connection", zap.String("dsn", dbDSN))
+	logger.Info("Initializing MySQL connection", zap.String("host", cfg.MySQL.Host), zap.String("db_name", cfg.MySQL.DBName))
 	dbConn, err := sql.Open("mysql", dbDSN)
 	if err != nil {
 		log.Fatalf("Error opening MySQL connection: %v", err)
