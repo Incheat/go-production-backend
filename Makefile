@@ -7,7 +7,6 @@ include make/grpc.mk
 include make/sqlc.mk
 include make/migrate.mk
 include make/build.mk
-include make/helm.mk
 include make/docker-compose.mk
 include make/run.mk
 include make/security.mk
