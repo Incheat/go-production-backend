@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/incheat/go-production-backend/pkg/obs/correlation"
-	"github.com/incheat/go-production-backend/pkg/utils"
+	"github.com/incheat/go-production-backend/pkg/ptr"
 	servergen "github.com/incheat/go-production-backend/services/auth/internal/api/oapi/gen/public/server"
 	"github.com/incheat/go-production-backend/services/auth/internal/constant"
 	chimiddlewareutils "github.com/incheat/go-production-backend/services/auth/internal/middleware/chi/utils"
@@ -71,8 +71,8 @@ func (h *Server) Login(ctx context.Context, request servergen.LoginRequestObject
 			AccessToken: &accessToken,
 		},
 		Headers: servergen.Login200ResponseHeaders{
-			VersionId: utils.Ptr(constant.APIResponseVersionV1),
-			SetCookie: utils.Ptr(setCookie),
+			VersionId: ptr.To(constant.APIResponseVersionV1),
+			SetCookie: ptr.To(setCookie),
 		},
 	}, nil
 }
@@ -81,7 +81,7 @@ func (h *Server) Login(ctx context.Context, request servergen.LoginRequestObject
 func (h *Server) Logout(_ context.Context, _ servergen.LogoutRequestObject) (servergen.LogoutResponseObject, error) {
 	return servergen.Logout204Response{
 		Headers: servergen.Logout204ResponseHeaders{
-			VersionId: utils.Ptr(constant.APIResponseVersionV1),
+			VersionId: ptr.To(constant.APIResponseVersionV1),
 		},
 	}, nil
 }
