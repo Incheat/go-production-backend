@@ -1,7 +1,7 @@
 # make/go.mk
 GO ?= go
 GOFILES := ./...
-GOLANGCI_LINT ?= golangci-lint
+GOLANGCI_LINT ?= /usr/local/bin/golangci-lint
 
 .PHONY: lint test unit-test pact-test fmt tidy ci tools
 

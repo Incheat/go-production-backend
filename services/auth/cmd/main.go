@@ -101,7 +101,7 @@ func main() {
 	}()
 
 	// Get OpenAPI definition from embedded spec
-	openAPISpec, err := servergen.GetSwagger()
+	openAPISpec, err := servergen.GetSpec()
 	if err != nil {
 		log.Fatalf("Error loading OpenAPI spec: %v", err)
 	}

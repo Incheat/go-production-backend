@@ -1,5 +1,5 @@
 # =========================
-# Envoy node identity (SDS required)
+# Envoy node identity
 # =========================
 node:
   id: user-envoy
@@ -15,34 +15,7 @@ static_resources:
         socket_address: { address: 0.0.0.0, port_value: 19080 }
       per_connection_buffer_limit_bytes: 32768
       filter_chains:
-        - transport_socket:  # mTLS inbound
-            name: envoy.transport_sockets.tls
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-              require_client_certificate: true
-              common_tls_context:
-                tls_certificate_sds_secret_configs:
-                  - name: user-envoy
-                    sds_config:
-                      resource_api_version: V3
-                      api_config_source:
-                        api_type: GRPC
-                        transport_api_version: V3
-                        grpc_services:
-                          - envoy_grpc:
-                              cluster_name: user_sds_uds
-                validation_context_sds_secret_config:
-                  name: trusted_ca
-                  sds_config:
-                    resource_api_version: V3
-                    api_config_source:
-                      api_type: GRPC
-                      transport_api_version: V3
-                      grpc_services:
-                        - envoy_grpc:
-                            cluster_name: user_sds_uds
-                alpn_protocols: ["h2"]
-          filters:
+        - filters:
             - name: envoy.filters.network.http_connection_manager
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -233,29 +206,6 @@ static_resources:
             max_pending_requests: 500
             max_requests: 1000
             max_retries: 500
-
-    # =========================
-    # user SDS cluster (UDS + gRPC)
-    # =========================
-    - name: user_sds_uds
-      connect_timeout: 1s
-      type: STATIC
-      lb_policy: ROUND_ROBIN
-
-      typed_extension_protocol_options:
-        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-          explicit_http_config:
-            http2_protocol_options: {}
-
-      load_assignment:
-        cluster_name: user_sds_uds
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    pipe:
-                      path: /var/run/step-sds/sds.sock
 
     # =========================
     # otel_collector_zipkin cluster

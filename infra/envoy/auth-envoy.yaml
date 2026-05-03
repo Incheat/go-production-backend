@@ -1,5 +1,5 @@
 # =========================
-# Envoy node identity (SDS required)
+# Envoy node identity
 # =========================
 node:
   id: auth-envoy
@@ -15,34 +15,7 @@ static_resources:
         socket_address: { address: 0.0.0.0, port_value: 18080 }
       per_connection_buffer_limit_bytes: 32768
       filter_chains:
-        - transport_socket:
-            name: envoy.transport_sockets.tls
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-              require_client_certificate: true
-              common_tls_context:
-                tls_certificate_sds_secret_configs:
-                  - name: auth-envoy
-                    sds_config:
-                      resource_api_version: V3
-                      api_config_source:
-                        api_type: GRPC
-                        transport_api_version: V3
-                        grpc_services:
-                          - envoy_grpc:
-                              cluster_name: auth_sds_uds
-                validation_context_sds_secret_config:
-                  name: trusted_ca
-                  sds_config:
-                    resource_api_version: V3
-                    api_config_source:
-                      api_type: GRPC
-                      transport_api_version: V3
-                      grpc_services:
-                        - envoy_grpc:
-                            cluster_name: auth_sds_uds
-                alpn_protocols: ["h2", "http/1.1"]
-          filters:
+        - filters:
             - name: envoy.filters.network.http_connection_manager
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -258,34 +231,7 @@ static_resources:
         socket_address: { address: 0.0.0.0, port_value: 19080 }
       per_connection_buffer_limit_bytes: 32768
       filter_chains:
-        - transport_socket:
-            name: envoy.transport_sockets.tls
-            typed_config:
-              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-              require_client_certificate: true
-              common_tls_context:
-                tls_certificate_sds_secret_configs:
-                  - name: auth-envoy
-                    sds_config:
-                      resource_api_version: V3
-                      api_config_source:
-                        api_type: GRPC
-                        transport_api_version: V3
-                        grpc_services:
-                          - envoy_grpc:
-                              cluster_name: auth_sds_uds
-                validation_context_sds_secret_config:
-                  name: trusted_ca
-                  sds_config:
-                    resource_api_version: V3
-                    api_config_source:
-                      api_type: GRPC
-                      transport_api_version: V3
-                      grpc_services:
-                        - envoy_grpc:
-                            cluster_name: auth_sds_uds
-                alpn_protocols: ["h2"]
-          filters:
+        - filters:
             - name: envoy.filters.network.http_connection_manager
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -494,29 +440,9 @@ static_resources:
                   address:
                     socket_address: { address: 127.0.0.1, port_value: 8080 }
 
-    # =========================
-    # auth SDS cluster (UDS + gRPC)
-    # =========================
-    - name: auth_sds_uds
-      connect_timeout: 1s
-      type: STATIC
-      lb_policy: ROUND_ROBIN
-      typed_extension_protocol_options:
-        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-          explicit_http_config:
-            http2_protocol_options: {}
-      load_assignment:
-        cluster_name: auth_sds_uds
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    pipe:
-                      path: /var/run/step-sds/sds.sock
 
     # =========================
-    # Example outbound mTLS cluster: auth -> user (call user-envoy, not user app)
+    # Example outbound cluster: auth -> user (call user-envoy, not user app)
     # =========================
     - name: user_via_sidecar_grpc
       connect_timeout: 1s
@@ -535,33 +461,6 @@ static_resources:
               - endpoint:
                   address:
                     socket_address: { address: user-envoy, port_value: 19080 }
-      transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-          sni: "user-envoy"
-          common_tls_context:
-            tls_certificate_sds_secret_configs:
-              - name: auth-envoy
-                sds_config:
-                  resource_api_version: V3
-                  api_config_source:
-                    api_type: GRPC
-                    transport_api_version: V3
-                    grpc_services:
-                      - envoy_grpc:
-                          cluster_name: auth_sds_uds
-            validation_context_sds_secret_config:
-              name: trusted_ca
-              sds_config:
-                resource_api_version: V3
-                api_config_source:
-                  api_type: GRPC
-                  transport_api_version: V3
-                  grpc_services:
-                    - envoy_grpc:
-                        cluster_name: auth_sds_uds
-            alpn_protocols: ["h2"]
       outlier_detection:
         consecutive_gateway_failure: 5
         interval: 5s
