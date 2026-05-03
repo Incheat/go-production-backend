@@ -1,5 +1,5 @@
 # =========================
-# Envoy node identity (SDS required)
+# Envoy node identity
 # =========================
 node:
   id: ingress-envoy
@@ -120,57 +120,11 @@ static_resources:
               - endpoint:
                   address:
                     socket_address: { address: auth-envoy, port_value: 18080 }
-      transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-          sni: "ingress-envoy"
-          common_tls_context:
-            tls_certificate_sds_secret_configs:
-              - name: ingress-envoy
-                sds_config:
-                  resource_api_version: V3
-                  api_config_source:
-                    api_type: GRPC
-                    transport_api_version: V3
-                    grpc_services:
-                      - envoy_grpc:
-                          cluster_name: ingress_sds_uds
-            validation_context_sds_secret_config:
-              name: trusted_ca
-              sds_config:
-                resource_api_version: V3
-                api_config_source:
-                  api_type: GRPC
-                  transport_api_version: V3
-                  grpc_services:
-                    - envoy_grpc:
-                        cluster_name: ingress_sds_uds
-            alpn_protocols: ["h2"]
       outlier_detection:
         consecutive_gateway_failure: 5
         interval: 5s
         base_ejection_time: 30s
         max_ejection_percent: 50
-
-    # step-sds gRPC
-    - name: ingress_sds_uds
-      connect_timeout: 1s
-      type: STATIC
-      lb_policy: ROUND_ROBIN
-      typed_extension_protocol_options:
-        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-          explicit_http_config:
-            http2_protocol_options: {}
-      load_assignment:
-        cluster_name: ingress_sds_uds
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    pipe:
-                      path: /var/run/step-sds/sds.sock
 
     - name: otel_collector_zipkin
       type: LOGICAL_DNS

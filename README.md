@@ -5,9 +5,7 @@
 ![govulncheck](https://img.shields.io/badge/govulncheck-enabled-blue)
 
 A **production-oriented Go backend monorepo** demonstrating *real-world* engineering practices:
-contract-first APIs, microservice boundaries, secure networking (mTLS), CI security scans, observability, and production-like local infrastructure.
-
-> This repository is not a “toy project”. It’s meant to look and feel like a real system you can operate.
+contract-first APIs, microservice boundaries, CI security scans, observability, and production-like local infrastructure.
 
 ---
 
@@ -15,7 +13,7 @@ contract-first APIs, microservice boundaries, secure networking (mTLS), CI secur
 
 - End-to-end ownership: design → implement → test → deploy → operate
 - Contract-first development (OpenAPI + gRPC)
-- Production-like local environment (proxy, mTLS, telemetry stack)
+- Production-like local environment (proxy, telemetry stack)
 - Practical reference architecture for Go backend engineers
 
 ---
@@ -43,12 +41,11 @@ graph TD
     Grafana
     Loki
     Tempo
-    CA["step-ca / mTLS CA"]
   end
 ```
 
 Why this shape:
-- **Envoy is the platform edge**: CORS / rate limiting / retries / TLS/mTLS are handled at the proxy/platform layer, not sprinkled through app code.
+- **Envoy is the platform edge**: CORS / rate limiting / retries / TLS are handled at the proxy/platform layer, not sprinkled through app code.
 - **Auth ↔ User talks over gRPC** for internal service-to-service calls.
 - **User owns persistence** (MySQL + migrations/sqlc).
 - **Auth uses Redis** for refresh-token/session style storage.
@@ -101,7 +98,6 @@ Generated code must never be edited; services communicate via generated clients 
 ## 🔐 Security model
 
 - JWT access tokens + refresh tokens (stored/managed via Auth service + Redis)
-- mTLS-ready platform (step-ca + cert generation/management)
 - CI security posture: `gosec`, `govulncheck` (and related checks as configured)
 
 ---
