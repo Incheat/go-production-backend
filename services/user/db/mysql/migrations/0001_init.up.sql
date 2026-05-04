@@ -5,3 +5,6 @@ CREATE TABLE users (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- pre-fill test data
+INSERT INTO users (email, password_hash) VALUES ('admin@example.com', 'password'), ('tester@example.com', 'password'), ('t2est@example.com', 'password');  
