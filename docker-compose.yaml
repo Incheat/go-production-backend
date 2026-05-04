@@ -166,7 +166,7 @@ services:
       - ./infra/security/tls/localhost:/etc/envoy/certs:ro
 
   # =========================
-  # AUTH: app + envoy
+  # AUTH: app + envoy + redis(dev)
   # =========================
 
   auth-envoy:
@@ -197,12 +197,22 @@ services:
     depends_on:
       startup-probe:
         condition: service_healthy
+      auth-redis:
+        condition: service_started
     # The app listens ONLY on:
     #   127.0.0.1:8080 (HTTP)
     #   127.0.0.1:9090 (gRPC)
 
+  auth-redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${AUTH_REDIS_PASSWORD:-test123}
+    networks:
+      - authnet
+    # ports:
+    #   - "6379:6379" # only when needed to access from physical machine
+
   # =========================
-  # USER: app + envoy
+  # USER: app + envoy + mysql(dev)
   # =========================
 
   user-envoy:
@@ -233,9 +243,33 @@ services:
     depends_on:
       startup-probe:
         condition: service_healthy
+      user-mysql:
+        condition: service_healthy
     # The app listens ONLY on:
     #   127.0.0.1:8080 (HTTP)
     #   127.0.0.1:9090 (gRPC)
+
+  user-mysql:
+    image: mysql:8.0
+    networks:
+      - usernet
+    environment:
+      # if the system doesn't provide the variable, use the default password for development
+      MYSQL_DATABASE: ${USER_MYSQL_DB_NAME:-gotest}
+      MYSQL_USER: ${USER_MYSQL_USER:-gotester}
+      MYSQL_PASSWORD: ${USER_MYSQL_PASSWORD:-test123}
+      MYSQL_ROOT_PASSWORD: ${USER_MYSQL_ROOT_PASSWORD:-root}
+    # ports:
+    #   - "3306:3306" # only when needed to access from physical machine
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # directly mount the migration files
+      - ./services/user/db/mysql/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${USER_MYSQL_USER}", "-p${USER_MYSQL_PASSWORD}"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
 
 networks:
   authnet: {}
@@ -245,3 +279,4 @@ networks:
 
 volumes:
   promtail-positions: {}
+  mysql-data: {}
