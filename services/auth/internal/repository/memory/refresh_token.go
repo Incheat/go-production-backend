@@ -29,7 +29,7 @@ func (r *RefreshTokenRepository) GetRefreshTokenSession(_ context.Context, refre
 	tokenHash := string(refreshToken)
 	refreshTokenSession, ok := r.data[tokenHash]
 	if !ok {
-		return nil, repository.ErrRefreshTokenNotFound
+		return nil, repository.ErrNotFound
 	}
 	return refreshTokenSession, nil
 }
@@ -42,7 +42,7 @@ func (r *RefreshTokenRepository) SaveRefreshTokenSession(_ context.Context, refr
 	tokenHash := string(refreshTokenSession.TokenHash)
 	_, ok := r.data[tokenHash]
 	if ok {
-		return repository.ErrRefreshTokenAlreadyExists
+		return repository.ErrAlreadyExists
 	}
 
 	r.data[tokenHash] = refreshTokenSession

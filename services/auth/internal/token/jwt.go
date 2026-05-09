@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -85,7 +86,7 @@ func (m *JWTMaker) CreateToken(ID string) (model.AccessToken, error) {
 	t.Header["kid"] = m.kid
 	tokenStr, err := t.SignedString(m.privateKey)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("sign jwt string with private key: %w", err)
 	}
 	accessToken := model.AccessToken(tokenStr)
 	return accessToken, nil

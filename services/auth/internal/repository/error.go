@@ -4,8 +4,8 @@ package repository
 import "errors"
 
 var (
-	// ErrRefreshTokenAlreadyExists is the error for when a refresh token already exists.
-	ErrRefreshTokenAlreadyExists = errors.New("refresh token already exists")
-	// ErrRefreshTokenNotFound is the error for when a refresh token is not found.
-	ErrRefreshTokenNotFound = errors.New("refresh token not found")
+	// ErrAlreadyExists is the error for when record already exists.
+	ErrAlreadyExists = errors.New("record already exists")
+	// ErrNotFound is the error for when record is not found.
+	ErrNotFound = errors.New("record not found")
 )

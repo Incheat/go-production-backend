@@ -3,12 +3,19 @@ package authservice
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	usergateway "github.com/incheat/go-production-backend/services/auth/internal/gateway/user"
 	"github.com/incheat/go-production-backend/services/auth/pkg/model"
 	usermodel "github.com/incheat/go-production-backend/services/user/pkg/model"
+)
+
+var (
+	// ErrInvalidCredentials is the error for when invalid credentials are provided.
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 // Service is the service for the auth API.
@@ -38,7 +45,7 @@ type RefreshTokenRepository interface {
 
 // UserGateway is the interface for the user gateway.
 type UserGateway interface {
-	VerifyCredentials(ctx context.Context, email string, password string) (*usermodel.User, error)
+	VerifyCredentials(ctx context.Context, email string, password string) (usermodel.User, error)
 }
 
 // New creates a new Service.
@@ -49,23 +56,35 @@ func New(accessToken AccessTokenMaker, refreshToken RefreshTokenMaker, refreshTo
 // LoginWithEmailAndPassword logs in a user with email and password.
 func (s *Service) LoginWithEmailAndPassword(ctx context.Context, email string, password string, userAgent, ipAddress string) (*LoginResult, error) {
 
-	fmt.Println("Starting to verify user credential")
 	user, err := s.userGateway.VerifyCredentials(ctx, email, password)
 	if err != nil {
-		fmt.Println("Error verifying user credential", err)
-		return nil, err
+		switch {
+		// business errors: precisely capture those that should be viewed as 401
+		case errors.Is(err, usergateway.ErrUserNotFound),
+			errors.Is(err, usergateway.ErrInvalidPassword):
+			return nil, fmt.Errorf("%w: %v", ErrInvalidCredentials, err)
+
+		// special cases: client cancel or timeout (optional, but strictly projects usually keep it)
+		case errors.Is(err, context.Canceled),
+			errors.Is(err, context.DeadlineExceeded):
+			return nil, err // original error, let Handler decide how to handle it
+
+		// technical errors: all unexpected Gateway failures
+		default:
+			return nil, fmt.Errorf("verify credentials via gateway: %w", err)
+		}
 	}
 
 	memberID := user.Email
 
 	accessToken, err := s.accessToken.CreateToken(memberID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create access token: %w", err)
 	}
 
 	refreshToken, err := s.refreshToken.CreateToken()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create refresh token: %w", err)
 	}
 
 	now := time.Now()
@@ -84,7 +103,7 @@ func (s *Service) LoginWithEmailAndPassword(ctx context.Context, email string, p
 	}
 	err = s.refreshTokenRepo.SaveRefreshTokenSession(ctx, refreshTokenSession)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("persist refresh token session (ID: %s): %w", refreshTokenSession.ID, err)
 	}
 
 	return &LoginResult{
