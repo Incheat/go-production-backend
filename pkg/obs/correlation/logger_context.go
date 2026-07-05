@@ -15,7 +15,18 @@ func ContextWithLogger(ctx context.Context, l *zap.Logger) context.Context {
 }
 
 // LoggerFromContext gets the logger from the context.
-func LoggerFromContext(ctx context.Context) (*zap.Logger, bool) {
+func LoggerFromContext(ctx context.Context) *zap.Logger {
+	l, ok := FromContext(ctx)
+	if !ok {
+		fallbackLogger := zap.L()
+		fallbackLogger.Warn("logger not found in context, falling back to global logger")
+		return fallbackLogger
+	}
+	return l
+}
+
+// FromContext gets the logger from the context.
+func FromContext(ctx context.Context) (*zap.Logger, bool) {
 	l, ok := ctx.Value(ctxKeyLogger{}).(*zap.Logger)
 	return l, ok
 }
