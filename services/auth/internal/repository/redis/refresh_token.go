@@ -4,6 +4,7 @@ package redisrepo
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -38,16 +39,17 @@ func (r *RefreshTokenRepository) GetRefreshTokenSession(ctx context.Context, ref
 	key := r.key(tokenHash)
 
 	data, err := r.rdb.Get(ctx, key).Bytes()
-	if err == redis.Nil {
-		return nil, repository.ErrRefreshTokenNotFound
-	}
+
 	if err != nil {
-		return nil, fmt.Errorf("redis GET error: %w", err)
+		if errors.Is(err, redis.Nil) {
+			return nil, repository.ErrNotFound
+		}
+		return nil, err
 	}
 
 	var session model.RefreshTokenSession
 	if err := json.Unmarshal(data, &session); err != nil {
-		return nil, fmt.Errorf("json.Unmarshal error: %w", err)
+		return nil, err
 	}
 
 	return &session, nil
@@ -58,19 +60,19 @@ func (r *RefreshTokenRepository) SaveRefreshTokenSession(ctx context.Context, se
 	tokenHash := string(session.TokenHash)
 	key := r.key(tokenHash)
 
-	// Check existence first (to match memory repo behavior)
+	// Check existence first
 	exists, err := r.rdb.Exists(ctx, key).Result()
 	if err != nil {
-		return fmt.Errorf("redis EXISTS error: %w", err)
+		return fmt.Errorf("check if refresh token session exists: %w", err)
 	}
 	if exists > 0 {
-		return repository.ErrRefreshTokenAlreadyExists
+		return fmt.Errorf("%w (key: %s)", repository.ErrAlreadyExists, key)
 	}
 
 	// Marshal to JSON
 	data, err := json.Marshal(session)
 	if err != nil {
-		return fmt.Errorf("json.Marshal error: %w", err)
+		return fmt.Errorf("marshal refresh token session to JSON: %w", err)
 	}
 
 	// TTL = ExpiresAt - Now
@@ -81,7 +83,7 @@ func (r *RefreshTokenRepository) SaveRefreshTokenSession(ctx context.Context, se
 
 	// Store session with TTL
 	if err := r.rdb.Set(ctx, key, data, ttl).Err(); err != nil {
-		return fmt.Errorf("redis SET error: %w", err)
+		return fmt.Errorf("redis set: %w", err)
 	}
 
 	return nil

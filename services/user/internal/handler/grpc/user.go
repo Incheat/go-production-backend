@@ -3,6 +3,7 @@ package userhandler
 
 import (
 	"context"
+	"errors"
 
 	userpb "github.com/incheat/go-production-backend/api/user/grpc/gen"
 	userservice "github.com/incheat/go-production-backend/services/user/internal/service/user"
@@ -32,7 +33,17 @@ func (s *Server) VerifyUserCredentials(
 
 	user, err := s.service.VerifyUserCredentials(ctx, email, password)
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, err.Error())
+		switch {
+		case errors.Is(err, userservice.ErrInvalidUserCredentials) || errors.Is(err, userservice.ErrUserNotFound):
+			return nil, status.Error(codes.Unauthenticated, err.Error())
+
+		case errors.Is(err, context.DeadlineExceeded):
+			return nil, status.Error(codes.DeadlineExceeded, err.Error())
+
+		default:
+			// all unexpected errors (e.g. database connection lost, gRPC crash) are given 500
+			return nil, status.Error(codes.Internal, err.Error())
+		}
 	}
 
 	return &userpb.VerifyUserCredentialsResponse{

@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
@@ -34,9 +35,9 @@ func (r *UserRepository) GetUserByEmail(
 	u, err := r.queries.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, repository.ErrUserNotFound
+			return nil, fmt.Errorf("%w: %v", repository.ErrNotFound, err)
 		}
-		return nil, err
+		return nil, fmt.Errorf("database query error (get user by email): %w", err)
 	}
 
 	return &model.User{
@@ -59,9 +60,9 @@ func (r *UserRepository) CreateUser(
 	})
 	if err != nil {
 		if isDuplicateKeyError(err) {
-			return repository.ErrUserAlreadyExists
+			return fmt.Errorf("%w: %v", repository.ErrAlreadyExists, err)
 		}
-		return err
+		return fmt.Errorf("database query error (create user): %w", err)
 	}
 
 	return nil
