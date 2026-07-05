@@ -76,7 +76,7 @@ func TestUnitVerifyUserCredentials_Errors(t *testing.T) {
 					Return((*model.User)(nil), errors.New("db error")).
 					Once()
 			},
-			wantErr: "db error",
+			wantErr: "get user by email: db error",
 		},
 		{
 			name: "invalid credentials",
@@ -89,7 +89,7 @@ func TestUnitVerifyUserCredentials_Errors(t *testing.T) {
 					}, nil).
 					Once()
 			},
-			wantErr: "invalid credentials",
+			wantErr: "invalid user credentials",
 		},
 	}
 

@@ -35,7 +35,7 @@ func (r *UserRepository) GetUserByEmail(_ context.Context, email string) (*model
 	defer r.RUnlock()
 	user, ok := r.data[email]
 	if !ok {
-		return nil, repository.ErrUserNotFound
+		return nil, repository.ErrNotFound
 	}
 	return user, nil
 }
@@ -46,7 +46,7 @@ func (r *UserRepository) CreateUser(_ context.Context, email string, user *model
 	defer r.Unlock()
 	_, ok := r.data[email]
 	if ok {
-		return repository.ErrUserAlreadyExists
+		return repository.ErrAlreadyExists
 	}
 
 	r.data[email] = user

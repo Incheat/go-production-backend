@@ -4,8 +4,8 @@ package repository
 import "errors"
 
 var (
-	// ErrUserAlreadyExists is the error for when a user already exists.
-	ErrUserAlreadyExists = errors.New("user already exists")
-	// ErrUserNotFound is the error for when a user is not found.
-	ErrUserNotFound = errors.New("user not found")
+	// ErrAlreadyExists is the error for when record already exists.
+	ErrAlreadyExists = errors.New("record already exists")
+	// ErrNotFound is the error for when record is not found.
+	ErrNotFound = errors.New("record not found")
 )
