@@ -32,18 +32,14 @@ func New(service *authservice.Service) *Server {
 // Login is the server for the Login endpoint.
 func (h *Server) Login(ctx context.Context, request servergen.LoginRequestObject) (servergen.LoginResponseObject, error) {
 
-	logger, ok := correlation.LoggerFromContext(ctx)
-	if !ok {
-		return servergen.Login500JSONResponse{
-			Error: "logger not found",
-		}, errors.New("logger not found")
-	}
+	logger := correlation.LoggerFromContext(ctx)
+
+	ctx, span := otel.Tracer("auth.handler").Start(ctx, "auth.login")
+	defer span.End()
+
+	logger = logger.With(correlation.TraceFields(ctx)...)
 
 	logger.Info("Login request received")
-
-	tr := otel.Tracer("auth.handler")
-	ctx, span := tr.Start(ctx, "auth.login")
-	defer span.End()
 
 	email := string(request.Body.Email)
 	password := request.Body.Password
@@ -59,6 +55,7 @@ func (h *Server) Login(ctx context.Context, request servergen.LoginRequestObject
 
 	res, err := h.service.LoginWithEmailAndPassword(ctx, email, password, userAgent, ipAddress)
 	if err != nil {
+		span.RecordError(err)
 		logger.Error("login failed", zap.Error(err))
 
 		switch {
